@@ -1,0 +1,4 @@
+node_modules/
+.env
+technical-spec.md
+interview-agent-build-plan.md
