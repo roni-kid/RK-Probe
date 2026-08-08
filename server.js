@@ -13,6 +13,12 @@ import { handleTurn } from './interviewer.js';
 const app = express();
 app.use(express.json());
 
+// Simple health check so visiting the bare URL in a browser doesn't just
+// show Express's default "Cannot GET /" — this app is an API only, no UI.
+app.get('/', (req, res) => {
+  res.json({ status: 'RK Probe is running', endpoint: 'POST /api/interview' });
+});
+
 app.post('/api/interview', async (req, res) => {
   const { sessionId, candidate, message } = req.body;
 
