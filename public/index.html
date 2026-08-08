@@ -46,11 +46,28 @@
         </div>
         <form id="answer-form" class="answer-form" hidden>
           <label class="sr-only" for="answer-input">Your answer</label>
-          <textarea id="answer-input" rows="3" placeholder="Type your answer…" required></textarea>
-          <button id="send-button" type="submit">
-            <span class="btn-label">Send</span>
-          </button>
+          <textarea id="answer-input" rows="3" placeholder="Type your answer, or hold the mic to speak…" required></textarea>
+          <div class="answer-form-actions">
+            <button
+              id="mic-button"
+              type="button"
+              class="mic-button"
+              aria-label="Hold to record your answer"
+              aria-pressed="false"
+              hidden
+            >
+              <svg class="mic-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 11a7 7 0 0 1-14 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button id="send-button" type="submit">
+              <span class="btn-label">Send</span>
+            </button>
+          </div>
         </form>
+        <p id="voice-status" class="voice-status" aria-live="polite" hidden></p>
       </section>
 
       <section id="feedback" class="feedback" aria-live="polite" hidden></section>

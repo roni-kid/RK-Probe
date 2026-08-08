@@ -345,7 +345,78 @@ button:disabled {
 }
 
 .answer-form textarea { flex: 1; resize: vertical; }
-.answer-form button { align-self: flex-end; }
+
+.answer-form-actions {
+  align-self: flex-end;
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* =========================================================
+   Voice input (push-to-talk)
+   ========================================================= */
+.mic-button {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  min-height: 48px;
+  padding: 0;
+  width: 48px;
+  touch-action: manipulation;
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+}
+
+.mic-button:hover:not(:disabled) {
+  background: var(--bg-surface-raised);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mic-button:disabled {
+  background: var(--bg-surface-raised);
+  color: var(--text-muted);
+}
+
+.mic-icon {
+  height: 20px;
+  width: 20px;
+}
+
+.mic-button.is-recording {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #1a0f08;
+  transform: scale(1.05);
+}
+
+.mic-button.is-recording::after {
+  animation: mic-pulse 1.4s var(--ease-out) infinite;
+  border: 1px solid var(--danger);
+  border-radius: 50%;
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.mic-button { position: relative; }
+
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(255, 107, 107, 0); }
+}
+
+.voice-status {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+  padding: 0 var(--space-5) var(--space-3);
+}
+
+.voice-status.is-error { color: var(--danger); }
 
 /* =========================================================
    Error banner
@@ -417,7 +488,7 @@ button:disabled {
 @media (max-width: 560px) {
   .app-shell { padding: var(--space-5) var(--space-3); }
   .start-controls, .answer-form { flex-direction: column; }
-  .answer-form button { align-self: stretch; }
+  .answer-form-actions { align-self: stretch; justify-content: flex-end; }
   .message { max-width: 92%; }
   .messages { height: 360px; }
 }

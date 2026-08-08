@@ -9,6 +9,8 @@ const errorMessage = document.querySelector('#error-message');
 const feedbackSection = document.querySelector('#feedback');
 const statusDot = document.querySelector('#status-dot');
 const statusText = document.querySelector('#status-text');
+const micButton = document.querySelector('#mic-button');
+const voiceStatus = document.querySelector('#voice-status');
 
 let candidates = [];
 let sessionId = null;
@@ -35,6 +37,8 @@ function setWaiting(isWaiting) {
   startButton.disabled = isWaiting || candidates.length === 0 || Boolean(sessionId);
   answerInput.disabled = isWaiting || interviewComplete;
   sendButton.disabled = isWaiting || interviewComplete;
+  micButton.disabled = isWaiting || interviewComplete;
+  if ((isWaiting || interviewComplete) && isRecording) stopRecording();
 }
 
 function addMessage(text, speaker) {
@@ -114,6 +118,101 @@ async function loadCandidates() {
     candidateSelect.replaceChildren(new Option('Candidates unavailable'));
     showError(error.message);
   }
+}
+
+// =========================================================
+// Voice input (push-to-talk)
+//
+// Uses the browser's built-in SpeechRecognition API to transcribe speech
+// into the answer textarea. Not supported in every browser (notably
+// Firefox) — if it's missing, the mic button just stays hidden and the
+// candidate types as before. This never talks to the server directly; it
+// only fills the same textarea the "Send" button already reads from.
+// =========================================================
+const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isRecording = false;
+let textBeforeRecording = '';
+
+function showVoiceStatus(message, isError = false) {
+  voiceStatus.textContent = message;
+  voiceStatus.classList.toggle('is-error', isError);
+  voiceStatus.hidden = false;
+}
+
+function clearVoiceStatus() {
+  voiceStatus.hidden = true;
+  voiceStatus.textContent = '';
+  voiceStatus.classList.remove('is-error');
+}
+
+function setRecordingUI(recording) {
+  isRecording = recording;
+  micButton.classList.toggle('is-recording', recording);
+  micButton.setAttribute('aria-pressed', String(recording));
+  if (recording) {
+    showVoiceStatus('Listening… release to stop.');
+  } else {
+    clearVoiceStatus();
+  }
+}
+
+function startRecording() {
+  if (!recognition || isRecording || answerInput.disabled) return;
+  textBeforeRecording = answerInput.value;
+  try {
+    recognition.start();
+    setRecordingUI(true);
+  } catch {
+    // start() throws if called while already running; safe to ignore.
+  }
+}
+
+function stopRecording() {
+  if (!recognition || !isRecording) return;
+  recognition.stop();
+}
+
+if (SpeechRecognitionApi) {
+  recognition = new SpeechRecognitionApi();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  recognition.addEventListener('result', (event) => {
+    let transcript = '';
+    for (let i = 0; i < event.results.length; i += 1) {
+      transcript += event.results[i][0].transcript;
+    }
+    const joiner = textBeforeRecording && !textBeforeRecording.endsWith(' ') ? ' ' : '';
+    answerInput.value = `${textBeforeRecording}${joiner}${transcript}`;
+  });
+
+  recognition.addEventListener('error', (event) => {
+    setRecordingUI(false);
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      showVoiceStatus('Microphone access was denied. You can still type your answer.', true);
+    } else if (event.error === 'no-speech') {
+      showVoiceStatus('No speech detected — try again or type your answer.', true);
+    } else {
+      showVoiceStatus('Voice input had a problem. You can still type your answer.', true);
+    }
+  });
+
+  recognition.addEventListener('end', () => {
+    setRecordingUI(false);
+  });
+
+  micButton.hidden = false;
+  micButton.addEventListener('mousedown', startRecording);
+  micButton.addEventListener('touchstart', (event) => {
+    event.preventDefault(); // avoid ghost mousedown + double-trigger on touch devices
+    startRecording();
+  });
+  micButton.addEventListener('mouseup', stopRecording);
+  micButton.addEventListener('mouseleave', stopRecording);
+  micButton.addEventListener('touchend', stopRecording);
+  micButton.addEventListener('touchcancel', stopRecording);
 }
 
 startButton.addEventListener('click', async () => {

@@ -340,3 +340,43 @@ and modify every line under Stage 4 time pressure."
 
 **Tool:** Claude (Sonnet)
 **Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
+
+---
+
+### 12. Push-to-talk voice input
+
+**Prompt used:**
+"Add voice input — push-to-talk (hold to record, release to transcribe)."
+
+**What actually happened:**
+- Added a mic button to `public/index.html` inside the existing answer form,
+  using the browser's native `SpeechRecognition` API (feature-detected via
+  `window.SpeechRecognition || window.webkitSpeechRecognition`) — no new
+  dependencies.
+- Implemented as push-to-talk: `mousedown`/`touchstart` starts recognition,
+  `mouseup`/`mouseleave`/`touchend`/`touchcancel` stops it. Chose push-to-talk
+  over auto-send-on-silence to avoid premature cutoffs and keep the candidate
+  in control of when their answer is actually sent — matches the existing
+  "type, then hit Send" pattern rather than replacing it.
+- Voice input only ever writes into the existing `answerInput` textarea; it
+  never calls the API directly. The existing submit handler, session logic,
+  and API contract are completely untouched.
+- Feature-detected gracefully: if `SpeechRecognition` isn't supported (e.g.
+  Firefox), the mic button stays `hidden` and the candidate types as before
+  — no broken UI, no console errors.
+- Handled three failure states with inline, non-blocking status messages:
+  permission denied, no speech detected, and generic recognition errors —
+  all fall back to "you can still type your answer."
+- Wired mic-button disabled state into the existing `setWaiting()` function
+  so it's disabled/stopped at the same points the textarea and send button
+  already are (during an in-flight request, or once the interview is done).
+- Verified: `node --check` on the updated `app.js` (syntax), and a manual
+  brace-balance check on the CSS additions. Did not have live-microphone
+  access in this environment — needs a real click-through test on your end,
+  in at least Chrome and one browser without SpeechRecognition support
+  (e.g. Firefox) to confirm the graceful-hide fallback.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
+
+---
