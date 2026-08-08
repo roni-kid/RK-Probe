@@ -227,3 +227,32 @@ diagnosis of one false-alarm error along the way.
 **Files touched:** none (validation only)
 
 ---
+
+### 8. Render deployment
+
+**What was done:**
+Deployed to Render's free web service tier per plan section 3. Configured:
+- Runtime: Node
+- Branch: `main`
+- Build Command: `npm install`
+- Start Command: `npm run start`
+- `GEMINI_API_KEY` set as a Render environment variable (never committed to
+  git — set directly in Render's dashboard)
+
+**Verification:**
+Build succeeded on first attempt (`npm install` — 94 packages, no errors).
+Ran the same start-interview curl test used for local testing, but against
+the live URL (`https://rk-probe.onrender.com/api/interview`) instead of
+localhost. Got back a real Gemini-generated opening question correctly
+targeting the candidate's skipped focus area (embeddings) — confirms the
+`GEMINI_API_KEY` environment variable is correctly wired on Render's side and
+the full request pipeline (Express → sessions → contextBuilder → interviewer
+→ Gemini) works identically in production as it did locally.
+
+Live demo URL: https://rk-probe.onrender.com
+
+**Tool:** Manual deployment via Render dashboard (no AI-authored code this
+step — infrastructure/config only).
+**Files touched:** none (deployment config, not committed code)
+
+---
