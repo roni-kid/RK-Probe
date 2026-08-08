@@ -420,3 +420,140 @@ transcribe] — the mic icon is there but doesn't work."
 `public/style.css`, `public/app.js`
 
 ---
+
+### 14. Three-column workspace redesign + real progress data from the API
+
+**Prompt used:**
+"Redesign the UI toward a dark glassy/gradient three-column layout (candidate
+context left, conversation center, progress right), styled like a set of
+reference mockups, but only borrow the layout/visual pattern — never fabricate
+data the backend doesn't actually produce. Extend the API response to include
+real focusPlan/daysCovered data for the right panel."
+
+**What actually happened:**
+- Reviewed 8 AI-generated UI mockups the user supplied. Explicitly declined to
+  copy their content (camera feeds, sentiment scores, "fit scores," cartoon
+  avatars) since RK Probe's API doesn't generate any of that — only borrowed
+  the three-column structural pattern several of them shared.
+- **Backend change (`interviewer.js`):** `handleTurn()` now returns a
+  `progress` object on every non-final turn: `questionsAsked`, `minQuestions`,
+  `minDays`, `daysCovered` (array, converted from the session's `Set`), and a
+  **redacted** `focusPlan` (day + title only — `reason` is deliberately
+  stripped, since the system prompt already tells the model not to reveal
+  *why* each day was chosen to the candidate; exposing it via the API would
+  leak the same information through a side channel). `server.js` needed no
+  changes since it already passes through whatever `handleTurn` returns.
+- **Frontend (`index.html`/`style.css`/`app.js`):** restructured the page into
+  a `.workspace` grid with three siblings — a candidate-context `aside`
+  (avatar initials, name, role, experience, education), the existing chat
+  `section` (internals untouched), and a progress `aside` (question count,
+  animated coverage bar, focus-day list with a "covered" highlight state).
+  Added a dark glass surface treatment (subtle gradient + backdrop blur)
+  across all panels to match the chosen reference style.
+- Explicitly kept the focus-day list in **priority order** (skipped → failed
+  → struggled → first-try), not day-number order, on the user's explicit
+  instruction — the out-of-sequence order is the context-builder's scoring
+  logic made visible, not a bug.
+- Verified: `node --check` on `interviewer.js` and `app.js`, manual brace-
+  balance check on `style.css`, traced `sessions.js`/`server.js` to confirm
+  `session.focusPlan` is always populated before `handleTurn` first runs.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `interviewer.js`, `public/index.html`, `public/style.css`,
+`public/app.js`
+
+---
+
+### 15. Fix: chat panel not filling its grid column when side panels are hidden
+
+**What happened:**
+Screenshot showed the chat panel rendering at roughly 1/5 the container width
+before the interview started, with visible dead space on both sides, even
+though the candidate/progress panels were correctly `hidden`.
+
+**Root cause:**
+`grid-template-columns: 240px minmax(0, 1fr) 280px` reserves all three column
+tracks regardless of whether the grid items inside them are `display: none`.
+Hiding an item removes it from layout, but does not collapse the column track
+it would have occupied — so the chat panel's `1fr` was only ever splitting
+whatever space was left after 240px + 280px of empty column were already
+claimed.
+
+**Fix:**
+`.workspace` now starts as a single column (`minmax(0, 1fr)`). JS adds a
+`.workspace--active` class (via `workspace.classList.add(...)` in the start-
+interview handler) the moment both side panels are actually populated and
+revealed, which is the only point the three-column template applies. Also
+had to raise the specificity of the existing `@media (max-width: 960px)`
+mobile-stacking rule (`.workspace, .workspace.workspace--active { ... }`) so
+it would still correctly override the active three-column state on narrow
+screens — a plain `.workspace` media-query selector would otherwise lose to
+the more specific `.workspace.workspace--active` rule.
+
+**Prompt used:**
+"[pasted screenshot showing the narrow chat panel with dead space on both
+sides]"
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `public/style.css`, `public/app.js`
+
+---
+
+### 16. Firefox voice input via server-side Gemini transcription
+
+**What happened:**
+User asked why the mic button was missing in a Firefox screenshot. Root cause
+(confirmed, not assumed): Firefox has no native `SpeechRecognition` support,
+so the existing feature-detection correctly left the button hidden — not a
+regression. User was shown a third-party doc proposing a "vanilla JS voice
+command router" as a fix; this was rejected after review, since its only real
+Firefox-support suggestion was asking the *candidate* to manually enable an
+experimental `about:config` flag, which is unusable for a hackathon demo where
+judges use their own default-configured browsers. Chose real cross-browser
+support instead: record locally, transcribe server-side via Gemini.
+
+**Prompt used:**
+"nah let's find a way" (in response to being shown the about:config-flag
+workaround) → confirmed via follow-up: "Yes, build it — I accept the added
+latency/complexity for real cross-browser voice" after being told this adds a
+new endpoint, real network latency, and more Stage-4 surface area to explain.
+
+**What actually happened:**
+- **New file `transcribe.js`:** one exported function, same one-function-
+  per-file pattern as `feedback.js`. Sends base64 audio to Gemini via
+  `inlineData: { mimeType, data }` (verified against Gemini's actual
+  documented JS SDK contract via web search before writing any code, rather
+  than guessing at the shape). Validates the mime type against Gemini's
+  documented supported list (WAV/MP3/AIFF/AAC/OGG/FLAC) before calling the
+  API, so an unsupported format fails fast with a clear error.
+- **`server.js`:** added `POST /api/transcribe`, a route fully separate from
+  `/api/interview` — no changes to the interview contract. Raised the JSON
+  body size limit from Express's 100kb default to 10mb, since base64-encoded
+  audio (even a few seconds) exceeds 100kb easily.
+- **`public/app.js`:** restructured the voice-input block so `startRecording`/
+  `stopRecording` are chosen once at load time based on feature detection:
+  native `SpeechRecognition` where available (unchanged behavior), otherwise
+  `MediaRecorder` + `POST /api/transcribe` if `MediaRecorder` and
+  `getUserMedia` exist. Both paths converge on the same `showVoiceStatus`/
+  `clearVoiceStatus` UI feedback functions, so the mic button's event
+  listeners don't need to know which implementation is active.
+- Specifically requests `'audio/ogg;codecs=opus'` from `MediaRecorder`
+  (verified via web search that Firefox has supported this combination since
+  version 29, and that OGG is on Gemini's documented supported list —
+  `audio/webm`, Chromium's default, is NOT documented as Gemini-supported,
+  so it was deliberately avoided rather than gambled on).
+- Verified: `node --check` on `server.js`, `transcribe.js`, and the full
+  restructured `app.js`; manually traced the `micButton.hidden` branch logic
+  across all three cases (SpeechRecognition available / MediaRecorder-only /
+  neither) with a small standalone script to confirm listeners attach
+  correctly in exactly the two cases they should. Did not have live-
+  microphone access in this environment to test an actual Firefox recording
+  round-trip — needs real end-to-end verification (hold mic → speak →
+  release → confirm transcript lands in the textarea) on the user's machine
+  in Firefox specifically, plus a regression check that Chrome/Edge behavior
+  is unchanged.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `transcribe.js` (new), `server.js`, `public/app.js`
+
+---

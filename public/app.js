@@ -195,11 +195,21 @@ async function loadCandidates() {
 // =========================================================
 // Voice input (push-to-talk)
 //
-// Uses the browser's built-in SpeechRecognition API to transcribe speech
-// into the answer textarea. Not supported in every browser (notably
-// Firefox) — if it's missing, the mic button just stays hidden and the
-// candidate types as before. This never talks to the server directly; it
-// only fills the same textarea the "Send" button already reads from.
+// Two implementations, chosen once at load time based on browser support:
+//
+//   1. Native SpeechRecognition (Chrome/Edge/Safari) — instant, on-device,
+//      no network round trip. Fills the textarea live as you speak.
+//   2. MediaRecorder + server-side Gemini transcription (Firefox, or any
+//      browser without SpeechRecognition) — records audio locally, sends it
+//      to POST /api/transcribe once you release the mic, and drops the
+//      returned text into the textarea. Slower (a real network + model
+//      round trip) but works anywhere MediaRecorder does.
+//
+// Both implementations expose the same three functions — startRecording(),
+// stopRecording(), and use the same showVoiceStatus()/clearVoiceStatus()
+// helpers — so the mic button's event listeners below don't need to know
+// or care which path is active. Only one implementation's variables/
+// functions are ever defined, based on which branch runs at load time.
 // =========================================================
 const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
@@ -230,33 +240,13 @@ function setRecordingUI(recording) {
   // and the result/error handlers below decide what the final message says.
 }
 
-const MIN_HOLD_MS = 350; // holds shorter than this rarely give the API time to hear anything
+const MIN_HOLD_MS = 350; // holds shorter than this rarely give either path enough audio to work with
 let recordingStartedAt = 0;
-
-function startRecording() {
-  if (!recognition || isRecording || answerInput.disabled) return;
-  textBeforeRecording = answerInput.value;
-  try {
-    recognition.start();
-    recordingStartedAt = Date.now();
-    setRecordingUI(true);
-  } catch {
-    // start() throws if called while already running; safe to ignore.
-  }
-}
-
-function stopRecording() {
-  if (!recognition || !isRecording) return;
-  const heldFor = Date.now() - recordingStartedAt;
-  if (heldFor < MIN_HOLD_MS) {
-    showVoiceStatus('Hold the mic a little longer while you speak.', true);
-  } else {
-    showVoiceStatus('Finishing up…');
-  }
-  recognition.stop();
-}
+let startRecording = () => {}; // replaced below once we know which API is available
+let stopRecording = () => {};
 
 if (SpeechRecognitionApi) {
+  // ---- Path 1: native SpeechRecognition ----
   recognition = new SpeechRecognitionApi();
   recognition.continuous = true;
   recognition.interimResults = true;
@@ -285,15 +275,138 @@ if (SpeechRecognitionApi) {
 
   recognition.addEventListener('end', () => {
     setRecordingUI(false);
-    // If recognition ended while we were still showing "Finishing up…" and no
-    // transcript ever arrived (the result handler would have cleared it if
-    // one had), nudge the candidate rather than leaving a stale message.
     if (voiceStatus.textContent === 'Finishing up…') {
       showVoiceStatus('Didn\u2019t catch that — try holding the mic a bit longer.', true);
     }
   });
 
+  startRecording = () => {
+    if (isRecording || answerInput.disabled) return;
+    textBeforeRecording = answerInput.value;
+    try {
+      recognition.start();
+      recordingStartedAt = Date.now();
+      setRecordingUI(true);
+    } catch {
+      // start() throws if called while already running; safe to ignore.
+    }
+  };
+
+  stopRecording = () => {
+    if (!isRecording) return;
+    const heldFor = Date.now() - recordingStartedAt;
+    if (heldFor < MIN_HOLD_MS) {
+      showVoiceStatus('Hold the mic a little longer while you speak.', true);
+    } else {
+      showVoiceStatus('Finishing up…');
+    }
+    recognition.stop();
+  };
+
   micButton.hidden = false;
+} else if (window.MediaRecorder && navigator.mediaDevices?.getUserMedia) {
+  // ---- Path 2: MediaRecorder + server-side Gemini transcription ----
+  // Firefox (and any other SpeechRecognition-less browser) falls here.
+  // Gemini's documented supported audio formats are WAV/MP3/AIFF/AAC/OGG/FLAC
+  // (see transcribe.js) — audio/webm is NOT on that list, so we specifically
+  // request 'audio/ogg;codecs=opus', which Firefox has supported since
+  // version 29. If ogg recording isn't available for some reason, we fall
+  // back to whatever the browser's default is rather than silently failing,
+  // but that fallback format may not be one Gemini accepts.
+  const PREFERRED_MIME = 'audio/ogg;codecs=opus';
+  const recordingMimeType = MediaRecorder.isTypeSupported(PREFERRED_MIME)
+    ? PREFERRED_MIME
+    : '';
+
+  let mediaRecorder = null;
+  let mediaStream = null;
+  let recordedChunks = [];
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // reader.result is a data: URL like "data:audio/ogg;base64,AAAA..." —
+        // we only want the part after the comma.
+        const base64 = String(reader.result).split(',')[1] || '';
+        resolve(base64);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function sendForTranscription(blob, mimeType) {
+    showVoiceStatus('Transcribing…');
+    try {
+      const base64Audio = await blobToBase64(blob);
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio, mimeType }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || 'Transcription failed.');
+      }
+      const transcript = (body.transcript || '').trim();
+      if (!transcript) {
+        showVoiceStatus('Didn\u2019t catch that — try holding the mic a bit longer.', true);
+        return;
+      }
+      const joiner = textBeforeRecording && !textBeforeRecording.endsWith(' ') ? ' ' : '';
+      answerInput.value = `${textBeforeRecording}${joiner}${transcript}`;
+      clearVoiceStatus();
+    } catch (err) {
+      showVoiceStatus('Voice input had a problem. You can still type your answer.', true);
+    }
+  }
+
+  startRecording = async () => {
+    if (isRecording || answerInput.disabled) return;
+    textBeforeRecording = answerInput.value;
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      showVoiceStatus('Microphone access was denied. You can still type your answer.', true);
+      return;
+    }
+    recordedChunks = [];
+    const options = recordingMimeType ? { mimeType: recordingMimeType } : undefined;
+    try {
+      mediaRecorder = new MediaRecorder(mediaStream, options);
+    } catch {
+      // Browser rejected our preferred mimeType — fall back to its default.
+      mediaRecorder = new MediaRecorder(mediaStream);
+    }
+    mediaRecorder.addEventListener('dataavailable', (event) => {
+      if (event.data.size > 0) recordedChunks.push(event.data);
+    });
+    mediaRecorder.addEventListener('stop', () => {
+      mediaStream.getTracks().forEach((track) => track.stop());
+      const heldFor = Date.now() - recordingStartedAt;
+      if (heldFor < MIN_HOLD_MS || recordedChunks.length === 0) {
+        showVoiceStatus('Hold the mic a little longer while you speak.', true);
+        return;
+      }
+      const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+      sendForTranscription(blob, mediaRecorder.mimeType);
+    });
+    mediaRecorder.start();
+    recordingStartedAt = Date.now();
+    setRecordingUI(true);
+  };
+
+  stopRecording = () => {
+    if (!isRecording || !mediaRecorder || mediaRecorder.state === 'inactive') return;
+    setRecordingUI(false);
+    mediaRecorder.stop();
+  };
+
+  micButton.hidden = false;
+}
+
+if (!micButton.hidden) {
   micButton.addEventListener('mousedown', startRecording);
   micButton.addEventListener('touchstart', (event) => {
     event.preventDefault(); // avoid ghost mousedown + double-trigger on touch devices
