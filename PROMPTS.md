@@ -380,3 +380,43 @@ and modify every line under Stage 4 time pressure."
 **Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
 
 ---
+
+### 13. Fix: form/typing-indicator visible before interview start, and silent mic failures
+
+**What happened:**
+Screenshot review showed the typing indicator and answer form visible on the
+initial "waiting to start" screen, and holding the mic button pulsed red but
+never produced a transcript, with no visible error.
+
+**Root cause 1 (CSS):**
+`.typing-indicator` and `.answer-form` both set `display: flex` unconditionally.
+A class selector's `display` value beats the browser's low-specificity
+`[hidden] { display: none }` default, so the `hidden` attribute was silently
+losing to these rules despite being correctly present in the HTML.
+
+**Root cause 2 (voice UX):**
+`SpeechRecognition.stop()` only attempts to return a result from audio
+captured so far — if released too quickly (a tap rather than a genuine hold),
+there may be too little audio for any result, and no error event fires either.
+This is a known rough edge of the API (Chromium implementations sometimes cut
+off before delivering final results on short recordings), not a logic bug —
+but it read as "silently broken" without feedback.
+
+**Fix:**
+- Added `[hidden] { display: none !important; }` as a global override so
+  `hidden` always wins regardless of what else targets the element.
+- Added a minimum-hold threshold (350ms) with an explicit "hold a little
+  longer" nudge if released too fast.
+- Added a "Finishing up…" status the instant the mic is released, and a
+  fallback "didn't catch that" message if recognition ends with no
+  transcript — so there's never silent, unexplained failure.
+
+**Prompt used:**
+"[pasted screenshot + description: mic button turns red/pulses but doesn't
+transcribe] — the mic icon is there but doesn't work."
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `public/index.html` (unchanged, verified only),
+`public/style.css`, `public/app.js`
+
+---

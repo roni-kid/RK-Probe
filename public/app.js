@@ -152,16 +152,21 @@ function setRecordingUI(recording) {
   micButton.setAttribute('aria-pressed', String(recording));
   if (recording) {
     showVoiceStatus('Listening… release to stop.');
-  } else {
-    clearVoiceStatus();
   }
+  // Note: we deliberately don't clear the status here when recording stops —
+  // stopRecording() already set a "Finishing up…" or "hold longer" message,
+  // and the result/error handlers below decide what the final message says.
 }
+
+const MIN_HOLD_MS = 350; // holds shorter than this rarely give the API time to hear anything
+let recordingStartedAt = 0;
 
 function startRecording() {
   if (!recognition || isRecording || answerInput.disabled) return;
   textBeforeRecording = answerInput.value;
   try {
     recognition.start();
+    recordingStartedAt = Date.now();
     setRecordingUI(true);
   } catch {
     // start() throws if called while already running; safe to ignore.
@@ -170,6 +175,12 @@ function startRecording() {
 
 function stopRecording() {
   if (!recognition || !isRecording) return;
+  const heldFor = Date.now() - recordingStartedAt;
+  if (heldFor < MIN_HOLD_MS) {
+    showVoiceStatus('Hold the mic a little longer while you speak.', true);
+  } else {
+    showVoiceStatus('Finishing up…');
+  }
   recognition.stop();
 }
 
@@ -186,6 +197,7 @@ if (SpeechRecognitionApi) {
     }
     const joiner = textBeforeRecording && !textBeforeRecording.endsWith(' ') ? ' ' : '';
     answerInput.value = `${textBeforeRecording}${joiner}${transcript}`;
+    if (transcript.trim()) clearVoiceStatus();
   });
 
   recognition.addEventListener('error', (event) => {
@@ -201,6 +213,12 @@ if (SpeechRecognitionApi) {
 
   recognition.addEventListener('end', () => {
     setRecordingUI(false);
+    // If recognition ended while we were still showing "Finishing up…" and no
+    // transcript ever arrived (the result handler would have cleared it if
+    // one had), nudge the candidate rather than leaving a stale message.
+    if (voiceStatus.textContent === 'Finishing up…') {
+      showVoiceStatus('Didn\u2019t catch that — try holding the mic a bit longer.', true);
+    }
   });
 
   micButton.hidden = false;

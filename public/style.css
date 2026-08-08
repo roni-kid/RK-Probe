@@ -94,6 +94,14 @@ button, select, textarea, input {
   border-radius: var(--radius-sm);
 }
 
+/* The browser's default [hidden] { display: none } is easily beaten by any
+   class selector that also sets display (e.g. .answer-form { display: flex }).
+   This rule guarantees hidden always wins, regardless of what else targets
+   the element. */
+[hidden] {
+  display: none !important;
+}
+
 /* =========================================================
    Layout shell
    ========================================================= */
