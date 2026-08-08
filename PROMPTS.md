@@ -256,3 +256,33 @@ step — infrastructure/config only).
 **Files touched:** none (deployment config, not committed code)
 
 ---
+
+### 9. Minimal Render-hosted chat frontend
+
+**Session log:** 2026-08-08 | Frontend and Render static hosting | Codex
+
+**Prompt used:**
+"Build a minimal, single-page chat UI for RK Probe. Use only plain HTML, CSS,
+and vanilla JavaScript; load `candidates.json`, call the existing
+`POST /api/interview` endpoint, display messages, loading, errors, and final
+feedback. Keep it a thin client with no interview logic. We will use Render."
+
+**What actually happened:**
+- Added `public/index.html`, `public/style.css`, and `public/app.js` with no
+  framework, packages, build step, local storage, retries, or client-side
+  interview decisions.
+- Added static-file serving to `server.js` so the existing Render web service
+  serves the UI and the supplied `candidates.json` from the same origin. This
+  keeps the frontend's single `fetch('/api/interview')` call free of CORS
+  configuration while preserving the API contract.
+- Added clear network/API error banners, disabled controls while a request is
+  in flight, auto-scrolling chat bubbles, and structured completion feedback.
+- Documented the UI and a browser limitation: `file://` pages cannot fetch a
+  neighbouring JSON file due to normal browser security, so use the Render
+  URL or local Express server.
+
+**Tool:** Codex
+**Files touched:** `server.js`, `public/index.html`, `public/style.css`,
+`public/app.js`, `README.md`, `PROMPTS.md`
+
+---

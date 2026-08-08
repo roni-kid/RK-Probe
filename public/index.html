@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RK Probe technical interview demo">
+    <title>RK Probe</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header>
+        <p class="eyebrow">AI technical interviewer</p>
+        <h1>RK Probe</h1>
+        <p class="intro">Choose a sample candidate and run a focused technical interview.</p>
+      </header>
+
+      <section class="start-panel" aria-labelledby="candidate-label">
+        <label id="candidate-label" for="candidate-select">Demo candidate</label>
+        <div class="start-controls">
+          <select id="candidate-select" disabled>
+            <option>Loading candidates…</option>
+          </select>
+          <button id="start-button" type="button" disabled>Start interview</button>
+        </div>
+      </section>
+
+      <p id="error-message" class="error-message" role="alert" hidden></p>
+
+      <section class="chat-panel" aria-label="Interview conversation">
+        <div id="messages" class="messages" aria-live="polite">
+          <p class="empty-state">Select a candidate to begin.</p>
+        </div>
+        <div id="typing-indicator" class="typing-indicator" aria-live="polite" hidden>
+          RK Probe is thinking…
+        </div>
+        <form id="answer-form" class="answer-form" hidden>
+          <label class="sr-only" for="answer-input">Your answer</label>
+          <textarea id="answer-input" rows="3" placeholder="Type your answer…" required></textarea>
+          <button id="send-button" type="submit">Send</button>
+        </form>
+      </section>
+
+      <section id="feedback" class="feedback" aria-live="polite" hidden></section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -12,11 +12,11 @@ import { handleTurn } from './interviewer.js';
 
 const app = express();
 app.use(express.json());
+app.use(express.static('public'));
 
-// Simple health check so visiting the bare URL in a browser doesn't just
-// show Express's default "Cannot GET /" — this app is an API only, no UI.
-app.get('/', (req, res) => {
-  res.json({ status: 'RK Probe is running', endpoint: 'POST /api/interview' });
+// The browser UI reads the supplied demo candidates from this static file.
+app.get('/candidates.json', (req, res) => {
+  res.sendFile('candidates.json', { root: process.cwd() });
 });
 
 app.post('/api/interview', async (req, res) => {

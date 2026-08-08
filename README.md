@@ -42,6 +42,10 @@ rk-probe/
 ├── feedback.js          Gemini call -> structured JSON feedback
 ├── curriculum.json      Provided course data (31 days, 8 modules)
 ├── candidates.json      Provided sample candidates, used for local testing
+├── public/              Vanilla browser UI served by Express
+│   ├── index.html       Candidate selector and chat layout
+│   ├── style.css        Responsive dark styling
+│   └── app.js           Thin fetch client and response renderer
 ├── PROMPTS.md           AI usage log — one entry per real prompt used
 └── package.json
 ```
@@ -76,6 +80,11 @@ npm start
 ```
 
 You should see `Interview agent running on port 3000`.
+
+Then open [http://localhost:3000](http://localhost:3000). The UI loads the
+provided sample candidates, creates a browser-tab-only session ID, and calls
+the same `POST /api/interview` endpoint documented below. It contains no
+interview, scoring, or model logic.
 
 ## API usage example
 
@@ -133,6 +142,9 @@ curl -s -X POST http://localhost:3000/api/interview \
   spec (no database requirement), not a bug.
 - **No authentication.** Matches the spec — the endpoint is intentionally
   open, as specified in `technical-spec.md`.
+- **The UI is served by this Express app.** Opening `public/index.html`
+  directly with a `file://` URL prevents browsers from fetching
+  `candidates.json`; use the Render URL or `npm start` instead.
 - **The model isn't perfectly linear** about which question it's currently
   following up on in rare cases (e.g. re-raising an earlier half-finished
   question after a topic switch). Completion, question count, and day

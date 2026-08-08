@@ -1,0 +1,68 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b1020;
+  color: #edf2ff;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 320px; }
+
+button, select, textarea { font: inherit; }
+
+button {
+  border: 0;
+  border-radius: 8px;
+  background: #5b8cff;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+}
+
+button:hover:not(:disabled) { background: #769fff; }
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.app-shell { margin: 0 auto; max-width: 860px; padding: 2.5rem 1rem; }
+.eyebrow { color: #91a7d8; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; margin: 0; text-transform: uppercase; }
+h1 { font-size: clamp(2rem, 7vw, 3.4rem); margin: 0.25rem 0; }
+.intro { color: #b7c0d9; margin: 0; }
+
+.start-panel, .chat-panel, .feedback {
+  background: #151d33;
+  border: 1px solid #293550;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+  padding: 1rem;
+}
+
+.start-panel label { display: block; font-weight: 700; margin-bottom: 0.55rem; }
+.start-controls { display: flex; gap: 0.75rem; }
+select, textarea { background: #0e1527; border: 1px solid #3a496b; border-radius: 8px; color: #edf2ff; padding: 0.75rem; }
+select { flex: 1; min-width: 0; }
+
+.messages { display: flex; flex-direction: column; gap: 0.75rem; height: 420px; overflow-y: auto; padding: 0.25rem; }
+.message { border-radius: 12px; line-height: 1.45; max-width: 78%; padding: 0.75rem 0.9rem; white-space: pre-wrap; }
+.message.interviewer { align-self: flex-start; background: #263968; }
+.message.candidate { align-self: flex-end; background: #2c6657; }
+.empty-state { color: #9cabc9; margin: auto; text-align: center; }
+.typing-indicator { color: #aebadb; font-size: 0.9rem; padding: 0.75rem 0.25rem 0; }
+
+.answer-form { border-top: 1px solid #293550; display: flex; gap: 0.75rem; margin-top: 1rem; padding-top: 1rem; }
+.answer-form textarea { flex: 1; resize: vertical; }
+.answer-form button { align-self: flex-end; }
+
+.error-message { background: #5b2030; border: 1px solid #d85b70; border-radius: 8px; color: #ffdce1; margin: 1rem 0 0; padding: 0.75rem; }
+.feedback h2 { margin-top: 0; }
+.feedback h3 { color: #b8c9ff; margin-bottom: 0.35rem; }
+.feedback p, .feedback ul { line-height: 1.5; }
+.feedback ul { margin-top: 0; padding-left: 1.25rem; }
+.sr-only { height: 1px; margin: -1px; overflow: hidden; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); }
+
+@media (max-width: 560px) {
+  .app-shell { padding: 1.25rem 0.75rem; }
+  .start-controls, .answer-form { flex-direction: column; }
+  .answer-form button { align-self: stretch; }
+  .message { max-width: 90%; }
+}
