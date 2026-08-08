@@ -132,3 +132,98 @@ model a first turn to respond to, satisfying the API's requirement that
 **Files touched:** `interviewer.js`
 
 ---
+
+### 5. Real end-to-end test against live Gemini API
+
+**What happened:**
+Ran a full multi-turn conversation locally against a real candidate
+(CAND-011, Mia Alvarez — skip-heavy profile) using `curl.exe` with file-based
+JSON payloads (`test-candidate.json`, `test-turn.json`) to avoid PowerShell's
+quoting/escaping issues with inline JSON.
+
+**What was verified:**
+- Opening question correctly targeted a skipped focus-plan day (embeddings)
+  and referenced the candidate's actual background.
+- Strong/detailed answers correctly caused the interviewer to move on to a
+  new topic rather than digging deeper.
+- A weak answer ("idk, not really sure") was handled gracefully without
+  crashing, and the model moved to a related but simpler follow-up.
+- The model correctly identified an answer as describing multi-agent
+  orchestration even though the candidate never used that term — confirms
+  follow-ups are grounded in actual answer content, not a static script.
+- No `[DAY:N]` tag or `[INTERVIEW_COMPLETE]` token ever leaked into a reply
+  shown to the candidate across ~8 turns.
+- Noted one soft limitation: the model isn't always perfectly linear about
+  which question is "current" (re-raised an earlier half-answered question
+  once after a topic switch) — not a bug, a known LLM-history-following
+  limitation, documented in README.
+
+**Tool:** Manual testing (curl), no additional AI prompt for this step —
+debugging/observation only.
+**Files touched:** none (validation only)
+
+---
+
+### 6. Deployment prep + real README
+
+**Prompt used:**
+"Add a start script to package.json for Render. Then write the real README —
+what RK Probe does, architecture, how to run locally, curl API examples, known
+limitations — replacing GitHub's auto-generated placeholder."
+
+**What actually happened:**
+- Added `"scripts": { "start": "node server.js" }` to `package.json` so
+  Render's default Node build/start flow (`npm install` → `npm start`) works
+  without extra Render-side configuration.
+- Wrote README.md covering: what RK Probe does and why the context-builder
+  scoring matters, full architecture/file breakdown, local run instructions,
+  a real curl example matching the actual API contract (start interview +
+  continue conversation + completed-interview feedback shape), and known
+  limitations (in-memory sessions, no auth — both deliberate per spec, plus
+  the soft model-linearity limitation found in testing).
+- Also resolved a git history snag: an early abandoned push attempt had left
+  two orphan commits on the GitHub remote (`Initial commit` + a first
+  `chore: init project + express skeleton`) before the real build sequence
+  existed locally. Rather than force-pushing over them (deleting real, if
+  early, history), merged with `git pull --allow-unrelated-histories`, then
+  manually resolved the resulting add/add conflicts by keeping the local
+  (correct, tested) version of every conflicted file. Preserved every real
+  commit rather than discarding any — important given the hackathon's stated
+  disqualification risk for sparse/non-incremental commit history.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `package.json`, `README.md`
+
+---
+
+### 7. Edge-case testing round (section 10 of build plan)
+
+**What was tested, all against the live local server with a real Gemini key:**
+
+- **Unknown `sessionId` sent with a `message` (no `candidate`)** — confirmed
+  clean `400 {"error":"candidate required to start a new session"}` response,
+  no crash, no 500. First attempt via inline PowerShell JSON hit a false
+  alarm (a `SyntaxError` from body-parser) caused by PowerShell's JSON
+  escaping mangling the request body itself — not a real bug, confirmed by
+  re-running the same test via a file-based `-d "@file.json"` payload
+  instead, which passed cleanly.
+- **Off-topic candidate answer** ("do you think pineapple belongs on
+  pizza?") — confirmed the interviewer briefly acknowledged the tangent
+  without engaging with it, then redirected immediately back to the pending
+  technical question. Matches the plan's requirement to handle off-topic
+  answers gracefully.
+- **Server restart mid-conversation** — started a real interview, restarted
+  the Node process, then sent a follow-up message to the now-defunct
+  `sessionId`. Confirmed it fails cleanly with the same
+  `{"error":"candidate required to start a new session"}` response rather
+  than hanging or crashing. This is the accepted, documented in-memory-only
+  scope limitation from the plan — verified it degrades safely rather than
+  silently corrupting state.
+
+All three edge cases from section 10 of the build plan now verified.
+
+**Tool:** Manual testing (curl) — no new AI-authored code this round, only
+diagnosis of one false-alarm error along the way.
+**Files touched:** none (validation only)
+
+---
