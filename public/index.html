@@ -32,7 +32,24 @@
 
       <p id="error-message" class="error-message" role="alert" hidden></p>
 
-      <section class="chat-panel" aria-label="Interview conversation">
+      <div class="workspace">
+        <aside class="side-panel candidate-panel" id="candidate-panel" aria-label="Candidate details" hidden>
+          <div class="candidate-avatar" id="candidate-avatar" aria-hidden="true"></div>
+          <h2 id="candidate-name" class="candidate-name">—</h2>
+          <p id="candidate-role" class="candidate-role">—</p>
+          <dl class="candidate-meta">
+            <div>
+              <dt>Experience</dt>
+              <dd id="candidate-experience">—</dd>
+            </div>
+            <div>
+              <dt>Education</dt>
+              <dd id="candidate-education">—</dd>
+            </div>
+          </dl>
+        </aside>
+
+        <section class="chat-panel" aria-label="Interview conversation">
         <div class="chat-panel-header">
           <span class="status-dot" id="status-dot" aria-hidden="true"></span>
           <span id="status-text" class="status-text">Waiting to start</span>
@@ -68,7 +85,23 @@
           </div>
         </form>
         <p id="voice-status" class="voice-status" aria-live="polite" hidden></p>
-      </section>
+        </section>
+
+        <aside class="side-panel progress-panel" id="progress-panel" aria-label="Interview progress" hidden>
+          <h2 class="panel-heading">Progress</h2>
+          <div class="progress-stat">
+            <span class="progress-stat-value" id="questions-count">0</span>
+            <span class="progress-stat-label">questions asked</span>
+          </div>
+          <div class="progress-bar-track" role="progressbar" aria-label="Curriculum days covered" aria-valuemin="0" id="days-progress-bar">
+            <div class="progress-bar-fill" id="days-progress-fill"></div>
+          </div>
+          <p class="progress-caption" id="days-progress-caption">0 of 0 focus days covered</p>
+
+          <h3 class="panel-subheading">Focus areas</h3>
+          <ul class="focus-list" id="focus-list"></ul>
+        </aside>
+      </div>
 
       <section id="feedback" class="feedback" aria-live="polite" hidden></section>
     </main>

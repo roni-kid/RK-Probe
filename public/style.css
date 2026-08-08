@@ -107,7 +107,7 @@ button, select, textarea, input {
    ========================================================= */
 .app-shell {
   margin: 0 auto;
-  max-width: 780px;
+  max-width: 1200px;
   padding: var(--space-7) var(--space-4) var(--space-7);
 }
 
@@ -140,15 +140,202 @@ h1 {
 }
 
 /* =========================================================
-   Shared panel surface
+   Shared panel surface — dark glass with a soft gradient edge
    ========================================================= */
 .start-panel,
 .chat-panel,
-.feedback {
-  background: var(--bg-surface);
+.feedback,
+.side-panel {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 40%),
+    var(--bg-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   margin-top: var(--space-5);
+}
+
+/* =========================================================
+   Three-column workspace
+   Left: candidate context · Center: conversation · Right: progress
+   All three panels are siblings inside one CSS grid — no nesting
+   tricks, easy to reason about if the column widths need to change
+   live during a feature request.
+   ========================================================= */
+.workspace {
+  display: grid;
+  gap: var(--space-5);
+  /* Base case (before an interview starts): both side panels are hidden,
+     so the chat panel gets the full width. Once the interview starts,
+     JS adds .workspace--active which switches this to three real columns
+     (see the .workspace--active rule below). We do this with a class
+     instead of an inline style so the max-width:960px media query further
+     down can still safely override it — inline styles set via element.style
+     would win over any stylesheet media query, breaking the mobile stack. */
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: var(--space-5);
+}
+
+.workspace.workspace--active {
+  grid-template-columns: 240px minmax(0, 1fr) 280px;
+}
+
+.workspace .chat-panel,
+.workspace .side-panel {
+  margin-top: 0;
+}
+
+.side-panel {
+  padding: var(--space-5);
+}
+
+.panel-heading {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-4);
+}
+
+.panel-subheading {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: var(--space-5) 0 var(--space-3);
+  text-transform: uppercase;
+}
+
+/* ---- Candidate panel (left column) ---- */
+.candidate-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border-radius: 50%;
+  color: var(--accent-contrast);
+  display: flex;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  height: 56px;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+  width: 56px;
+}
+
+.candidate-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0 0 var(--space-1);
+}
+
+.candidate-role {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0 0 var(--space-5);
+}
+
+.candidate-meta {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.candidate-meta dt {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.candidate-meta dd {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  margin: var(--space-1) 0 0;
+}
+
+/* ---- Progress panel (right column) ---- */
+.progress-stat {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.progress-stat-value {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.progress-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.progress-bar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-pill);
+  height: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.progress-bar-fill {
+  background: linear-gradient(90deg, var(--accent), var(--candidate-accent));
+  border-radius: var(--radius-pill);
+  height: 100%;
+  transition: width var(--duration-base) var(--ease-out);
+  width: 0%;
+}
+
+.progress-caption {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: var(--space-2) 0 0;
+}
+
+.focus-list {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.focus-list li {
+  align-items: center;
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  display: flex;
+  font-size: 0.85rem;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.focus-list li.is-covered {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.focus-list-dot {
+  background: var(--text-muted);
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 6px;
+  width: 6px;
+}
+
+.focus-list li.is-covered .focus-list-dot {
+  background: var(--accent);
 }
 
 .start-panel { padding: var(--space-5); }
@@ -493,6 +680,22 @@ button:disabled {
 /* =========================================================
    Responsive
    ========================================================= */
+@media (max-width: 960px) {
+  .workspace,
+  .workspace.workspace--active {
+    grid-template-columns: 1fr;
+  }
+  .candidate-panel {
+    order: 1;
+  }
+  .chat-panel {
+    order: 2;
+  }
+  .progress-panel {
+    order: 3;
+  }
+}
+
 @media (max-width: 560px) {
   .app-shell { padding: var(--space-5) var(--space-3); }
   .start-controls, .answer-form { flex-direction: column; }

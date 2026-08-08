@@ -11,6 +11,19 @@ const statusDot = document.querySelector('#status-dot');
 const statusText = document.querySelector('#status-text');
 const micButton = document.querySelector('#mic-button');
 const voiceStatus = document.querySelector('#voice-status');
+const candidatePanel = document.querySelector('#candidate-panel');
+const candidateAvatar = document.querySelector('#candidate-avatar');
+const candidateName = document.querySelector('#candidate-name');
+const candidateRole = document.querySelector('#candidate-role');
+const candidateExperience = document.querySelector('#candidate-experience');
+const candidateEducation = document.querySelector('#candidate-education');
+const progressPanel = document.querySelector('#progress-panel');
+const questionsCount = document.querySelector('#questions-count');
+const daysProgressBar = document.querySelector('#days-progress-bar');
+const daysProgressFill = document.querySelector('#days-progress-fill');
+const daysProgressCaption = document.querySelector('#days-progress-caption');
+const focusList = document.querySelector('#focus-list');
+const workspace = document.querySelector('.workspace');
 
 let candidates = [];
 let sessionId = null;
@@ -95,6 +108,65 @@ function renderFeedback(feedback) {
   createFeedbackList('Gaps', feedback?.gaps);
   createFeedbackList('Next steps', feedback?.next);
   feedbackSection.hidden = false;
+}
+
+function initials(name) {
+  return name
+    .split(' ')
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+function renderCandidatePanel(candidate) {
+  const member = candidate.member ?? candidate;
+  candidateAvatar.textContent = initials(member.name || '?');
+  candidateName.textContent = member.name || 'Unknown candidate';
+  candidateRole.textContent = member.jobRole || '';
+  candidateExperience.textContent = member.yearsExperience != null
+    ? `${member.yearsExperience} years`
+    : 'Not specified';
+  candidateEducation.textContent = member.education || 'Not specified';
+  candidatePanel.hidden = false;
+}
+
+// Renders the right-hand progress panel from the `progress` object the API
+// returns on every turn (see interviewer.js buildProgressSummary). This is
+// real session state from the server, not something the client invents —
+// the client only ever displays day numbers/titles, never the `reason` each
+// day was chosen, since that's deliberately kept from the candidate.
+function renderProgress(progress) {
+  if (!progress) return;
+  progressPanel.hidden = false;
+
+  questionsCount.textContent = progress.questionsAsked;
+
+  const totalDays = progress.focusPlan.length;
+  const coveredCount = progress.focusPlan.filter(
+    (f) => progress.daysCovered.includes(f.day)
+  ).length;
+  const percent = totalDays > 0 ? Math.round((coveredCount / totalDays) * 100) : 0;
+
+  daysProgressFill.style.width = `${percent}%`;
+  daysProgressBar.setAttribute('aria-valuenow', String(coveredCount));
+  daysProgressBar.setAttribute('aria-valuemax', String(totalDays));
+  daysProgressCaption.textContent = `${coveredCount} of ${totalDays} focus days covered`;
+
+  focusList.replaceChildren();
+  progress.focusPlan.forEach((focusDay) => {
+    const isCovered = progress.daysCovered.includes(focusDay.day);
+    const item = document.createElement('li');
+    item.className = isCovered ? 'is-covered' : '';
+    const dot = document.createElement('span');
+    dot.className = 'focus-list-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.textContent = `Day ${focusDay.day} — ${focusDay.title}`;
+    item.append(dot, label);
+    focusList.append(item);
+  });
 }
 
 async function loadCandidates() {
@@ -246,6 +318,9 @@ startButton.addEventListener('click', async () => {
     answerForm.hidden = false;
     answerInput.focus();
     setStatus('is-live', 'Interview in progress');
+    renderCandidatePanel(candidate);
+    renderProgress(result.progress);
+    workspace.classList.add('workspace--active');
   } catch (error) {
     sessionId = null;
     showError(error.message);
@@ -273,6 +348,8 @@ answerForm.addEventListener('submit', async (event) => {
       answerForm.hidden = true;
       renderFeedback(result.feedback);
       setStatus('is-done', 'Interview complete');
+    } else {
+      renderProgress(result.progress);
     }
   } catch (error) {
     answerInput.value = message;

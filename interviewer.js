@@ -78,7 +78,26 @@ export async function handleTurn(session, message) {
     session.transcript.push({ question: cleanText, answer: null });
   }
 
-  return { reply: cleanText, done: false };
+  return {
+    reply: cleanText,
+    done: false,
+    progress: buildProgressSummary(session),
+  };
+}
+
+// Progress data sent to the client so the UI can show real state (question
+// count, which focus days have been covered) without leaking *why* each day
+// was chosen — the system prompt already tells the model not to reveal that
+// reasoning to the candidate, so we redact `reason` here too rather than
+// exposing it through a side channel the model was never told about.
+function buildProgressSummary(session) {
+  return {
+    questionsAsked: session.questionsAsked,
+    minQuestions: MIN_QUESTIONS,
+    minDays: MIN_DAYS,
+    daysCovered: Array.from(session.daysCovered),
+    focusPlan: session.focusPlan.map(f => ({ day: f.day, title: f.title })),
+  };
 }
 
 function buildSystemPrompt(session) {
