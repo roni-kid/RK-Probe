@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="RK Probe technical interview demo">
     <title>RK Probe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
@@ -21,23 +24,32 @@
           <select id="candidate-select" disabled>
             <option>Loading candidates…</option>
           </select>
-          <button id="start-button" type="button" disabled>Start interview</button>
+          <button id="start-button" type="button" disabled>
+            <span class="btn-label">Start interview</span>
+          </button>
         </div>
       </section>
 
       <p id="error-message" class="error-message" role="alert" hidden></p>
 
       <section class="chat-panel" aria-label="Interview conversation">
+        <div class="chat-panel-header">
+          <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+          <span id="status-text" class="status-text">Waiting to start</span>
+        </div>
         <div id="messages" class="messages" aria-live="polite">
           <p class="empty-state">Select a candidate to begin.</p>
         </div>
         <div id="typing-indicator" class="typing-indicator" aria-live="polite" hidden>
+          <span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
           RK Probe is thinking…
         </div>
         <form id="answer-form" class="answer-form" hidden>
           <label class="sr-only" for="answer-input">Your answer</label>
           <textarea id="answer-input" rows="3" placeholder="Type your answer…" required></textarea>
-          <button id="send-button" type="submit">Send</button>
+          <button id="send-button" type="submit">
+            <span class="btn-label">Send</span>
+          </button>
         </form>
       </section>
 

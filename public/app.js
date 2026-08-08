@@ -7,6 +7,8 @@ const messages = document.querySelector('#messages');
 const typingIndicator = document.querySelector('#typing-indicator');
 const errorMessage = document.querySelector('#error-message');
 const feedbackSection = document.querySelector('#feedback');
+const statusDot = document.querySelector('#status-dot');
+const statusText = document.querySelector('#status-text');
 
 let candidates = [];
 let sessionId = null;
@@ -20,6 +22,12 @@ function showError(message) {
 function clearError() {
   errorMessage.hidden = true;
   errorMessage.textContent = '';
+}
+
+function setStatus(state, label) {
+  statusDot.classList.remove('is-live', 'is-done');
+  if (state) statusDot.classList.add(state);
+  statusText.textContent = label;
 }
 
 function setWaiting(isWaiting) {
@@ -113,15 +121,18 @@ startButton.addEventListener('click', async () => {
   sessionId = createSessionId();
   const candidate = candidates[Number(candidateSelect.value)];
   setWaiting(true);
+  setStatus(null, 'Connecting…');
 
   try {
     const result = await callInterviewApi({ sessionId, candidate });
     addMessage(result.reply, 'interviewer');
     answerForm.hidden = false;
     answerInput.focus();
+    setStatus('is-live', 'Interview in progress');
   } catch (error) {
     sessionId = null;
     showError(error.message);
+    setStatus(null, 'Waiting to start');
   } finally {
     setWaiting(false);
   }
@@ -144,12 +155,14 @@ answerForm.addEventListener('submit', async (event) => {
       interviewComplete = true;
       answerForm.hidden = true;
       renderFeedback(result.feedback);
+      setStatus('is-done', 'Interview complete');
     }
   } catch (error) {
     answerInput.value = message;
     showError(error.message);
   } finally {
     setWaiting(false);
+    if (!interviewComplete) answerInput.focus();
   }
 });
 

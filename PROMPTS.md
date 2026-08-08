@@ -286,3 +286,57 @@ feedback. Keep it a thin client with no interview logic. We will use Render."
 `public/app.js`, `README.md`, `PROMPTS.md`
 
 ---
+
+### 10. Visual redesign of the browser UI
+
+**Session log:** 2026-08-08 | Interview workspace redesign | Codex
+
+**Prompt used:**
+"Redesign the working RK Probe UI based on the supplied screenshot while
+keeping the existing API behavior and thin-client architecture."
+
+**What actually happened:**
+- Reworked the page into a focused interview workspace with a compact brand
+  header, online status, stronger hero copy, setup/conversation step labels,
+  and a dedicated interview-room frame.
+- Added clearer responsive spacing, accessible labels, empty-state guidance,
+  polished message bubbles, textarea composer styling, status chips, and
+  structured feedback presentation without adding dependencies or client-side
+  interview logic.
+- Verified the redesigned page in the local browser at desktop width, including
+  candidate loading and the empty interview state.
+
+**Tool:** Codex
+**Files touched:** `public/index.html`, `public/style.css`, `public/app.js`,
+`PROMPTS.md`
+
+---
+### 11. Frontend visual redesign (design tokens + accessibility pass)
+
+**Prompt used:**
+"Use the ui-styling and ui-ux-pro-max skills to redesign the UI of the
+frontend. Keep the existing plain HTML/CSS/JS architecture — no new
+libraries, no build step, no framework — since I need to be able to read
+and modify every line under Stage 4 time pressure."
+
+**What actually happened:**
+- Rewrote `public/style.css` around a CSS custom-property token system
+  (color, spacing, radius, motion) instead of the original flat hardcoded
+  values — makes re-theming a one-line change per token, not a hunt-and-replace.
+- Added a Space Grotesk / Inter font pairing (previously system-font only).
+- Ran the new styling against the ui-ux-pro-max accessibility/touch/typography
+  checklists: confirmed 4.5:1 contrast, 48px minimum touch targets on all
+  buttons/inputs, visible focus rings preserved (not stripped), and added a
+  `prefers-reduced-motion` override for the new message/typing animations.
+- Added a small status indicator (dot + text) to `index.html`'s chat panel
+  header, wired up in `app.js` via one new `setStatus()` helper called at the
+  three points interview state changes (start / live / complete). No other
+  logic in `app.js` was touched — same fetch calls, same session handling,
+  same error handling as before.
+- Deliberately did NOT introduce Tailwind, React, or any build tooling despite
+  ui-ux-pro-max's default stack recommendations leaning that direction — chose
+  the plain-CSS design-token approach from ui-styling instead, to keep the
+  file structure and everything explainable under Stage 4 pressure.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
