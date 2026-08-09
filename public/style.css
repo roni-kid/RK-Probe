@@ -489,6 +489,43 @@ h1 {
 }
 
 /* =========================================================
+   Loading view — shown the instant a candidate card is clicked,
+   replacing the grid until the interview API call resolves. Keeps
+   the user looking at one thing instead of having to scroll down
+   to a chat panel that hasn't appeared yet.
+   ========================================================= */
+.loading-view {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  justify-content: center;
+  min-height: 420px;
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+}
+
+.loading-spinner {
+  animation: spin 900ms linear infinite;
+  border: 3px solid var(--border-strong);
+  border-radius: 50%;
+  border-top-color: var(--accent);
+  display: block;
+  height: 40px;
+  width: 40px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+#loading-view-text {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* =========================================================
    Candidate card grid
    Replaces the old dropdown+button start panel — one card per
    demo candidate, each with its own "Start interview" button.

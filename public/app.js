@@ -1,4 +1,7 @@
 const candidateGrid = document.querySelector('#candidate-grid');
+const startPanel = document.querySelector('.start-panel');
+const loadingView = document.querySelector('#loading-view');
+const loadingViewText = document.querySelector('#loading-view-text');
 const answerForm = document.querySelector('#answer-form');
 const answerInput = document.querySelector('#answer-input');
 const sendButton = document.querySelector('#send-button');
@@ -615,7 +618,8 @@ function resetToStart() {
   clearError();
   setStatus(null, 'Waiting to start');
 
-  document.querySelector('.start-panel').hidden = false;
+  startPanel.hidden = false;
+  loadingView.hidden = true;
 }
 
 restartButton.addEventListener('click', resetToStart);
@@ -623,12 +627,18 @@ restartButton.addEventListener('click', resetToStart);
 async function startInterview(candidate) {
   clearError();
   sessionId = createSessionId();
+
+  const member = candidate.member ?? candidate;
+  startPanel.hidden = true;
+  loadingViewText.textContent = `Preparing interview for ${member.name || 'candidate'}…`;
+  loadingView.hidden = false;
+
   setWaiting(true);
   setStatus(null, 'Connecting…');
 
   try {
     const result = await callInterviewApi({ sessionId, candidate });
-    document.querySelector('.start-panel').hidden = true;
+    loadingView.hidden = true;
     addMessage(result.reply, 'interviewer');
     answerForm.hidden = false;
     answerInput.focus();
@@ -639,6 +649,8 @@ async function startInterview(candidate) {
     restartButton.hidden = false;
   } catch (error) {
     sessionId = null;
+    loadingView.hidden = true;
+    startPanel.hidden = false;
     showError(error.message);
     setStatus(null, 'Waiting to start');
   } finally {

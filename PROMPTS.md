@@ -1105,3 +1105,41 @@ progress panel, focus list, feedback, restart) working exactly as before."
 **Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
 
 ---
+
+### 29. Loading view between candidate selection and interview start
+
+**Prompt used:**
+"Clicking a card in a 20-candidate grid means the interview appears below
+the fold — user has to scroll to find it. Fix: hide the grid immediately on
+click and show a dedicated loading view (dark background, spinner, no chat
+panel yet) while the /api/interview call is in flight, then swap to the
+workspace once it resolves. No new pages/routing — single-page view
+toggling only."
+
+**What actually happened:**
+- `index.html`: added `#loading-view` section (spinner + status text),
+  hidden by default, positioned between the candidate grid and the error
+  banner.
+- `style.css`: added `.loading-view`/`.loading-spinner` styles — centered
+  flex column, min-height so it doesn't collapse to nothing, a single
+  `@keyframes spin` rule. Reuses existing tokens (`--accent`,
+  `--border-strong`, `--ease-out` conventions already used elsewhere).
+- `app.js`: added `startPanel`/`loadingView`/`loadingViewText` element refs.
+  `startInterview(candidate)` now hides the grid and shows the loading view
+  (with the candidate's name interpolated in) BEFORE the `await` on the API
+  call, so the user sees it the instant they click — not after the network
+  round trip. On success, loading view is hidden and the workspace takes
+  over. On error, loading view is hidden and the grid is re-shown so they
+  can pick again. `resetToStart()` also explicitly hides the loading view
+  as part of returning to the grid.
+- Considered two alternatives before this: separate HTML pages
+  (candidates.html/interview.html) and auto-scroll-into-view. Rejected
+  separate pages as unnecessary complexity for Stage 4 explainability
+  (cross-page state passing, duplicate `<head>` boilerplate). Rejected
+  auto-scroll because it still briefly shows both panels stacked before
+  scrolling, which doesn't fully solve "user has to realize something moved."
+  Hiding the grid outright and showing a dedicated loading state removes the
+  scroll requirement entirely.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
