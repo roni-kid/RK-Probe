@@ -6,30 +6,33 @@
 :root {
   color-scheme: dark;
 
-  /* Colors */
-  --bg-primary: #0c0f16;
-  --bg-secondary: #12161f;
-  --bg-surface: #171c28;
-  --bg-surface-raised: #1d2331;
+  /* Colors — RK StudyMind palette (indigo/violet), applied intentionally
+     for visual consistency across RK's projects. Token names are unchanged
+     from the previous orange/teal theme, so every rule referencing them
+     elsewhere in this file picks up the new palette automatically. */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #10141f;
+  --bg-surface: #141824;
+  --bg-surface-raised: #1a1f2e;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.16);
 
-  --accent: #ff8a5b;
-  --accent-strong: #ff7038;
-  --accent-soft: rgba(255, 138, 91, 0.14);
-  --accent-contrast: #1a0f08;
+  --accent: #6366f1;
+  --accent-strong: #4f46e5;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --accent-contrast: #f5f5ff;
 
-  --interviewer-bubble: #1d2536;
-  --candidate-bubble: #24382f;
-  --candidate-accent: #5fd9a4;
+  --interviewer-bubble: #1a1f2e;
+  --candidate-bubble: #26305a;
+  --candidate-accent: #818cf8;
 
-  --text-primary: #f3f5fa;
-  --text-secondary: #9aa4b8;
-  --text-muted: #6b7591;
+  --text-primary: #f1f2f8;
+  --text-secondary: #9aa1b8;
+  --text-muted: #6b7290;
 
-  --success: #5fd9a4;
-  --danger: #ff6b6b;
-  --danger-soft: rgba(255, 107, 107, 0.14);
+  --success: #22c55e;
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.14);
 
   /* Typography */
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -78,7 +81,7 @@ body::before {
   pointer-events: none;
   background:
     radial-gradient(circle at 20% 25%, var(--accent-soft), transparent 55%),
-    radial-gradient(circle at 80% 75%, rgba(95, 217, 164, 0.10), transparent 55%);
+    radial-gradient(circle at 80% 75%, rgba(129, 140, 248, 0.10), transparent 55%);
   background-size: 140% 140%;
   animation: bg-drift 40s var(--ease-out) infinite;
 }
@@ -210,8 +213,8 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at 15% -10%, rgba(255, 138, 91, 0.10), transparent 45%),
-    radial-gradient(circle at 90% 0%, rgba(95, 217, 164, 0.06), transparent 40%),
+    radial-gradient(circle at 15% -10%, rgba(99, 102, 241, 0.10), transparent 45%),
+    radial-gradient(circle at 90% 0%, rgba(129, 140, 248, 0.06), transparent 40%),
     var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -694,7 +697,7 @@ button:disabled {
 
 .status-dot.is-live {
   background: var(--success);
-  box-shadow: 0 0 0 4px rgba(95, 217, 164, 0.18);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
 }
 
 .status-dot.is-done {
@@ -860,7 +863,7 @@ button:disabled {
 .mic-button.is-recording {
   background: var(--danger);
   border-color: var(--danger);
-  color: #1a0f08;
+  color: var(--accent-contrast);
   transform: scale(1.05);
 }
 
@@ -876,8 +879,8 @@ button:disabled {
 .mic-button { position: relative; }
 
 @keyframes mic-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.45); }
-  100% { box-shadow: 0 0 0 12px rgba(255, 107, 107, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
 }
 
 .voice-status {
