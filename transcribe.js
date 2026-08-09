@@ -12,7 +12,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 
-const MODEL = 'gemini-3.6-flash';
+const MODEL = 'gemini-3.5-flash';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Gemini's documented supported audio formats: WAV, MP3, AIFF, AAC, OGG, FLAC.

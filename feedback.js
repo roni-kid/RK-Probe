@@ -7,7 +7,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { withRetry } from './retry.js';
 
-const MODEL = 'gemini-3.6-flash';
+const MODEL = 'gemini-3.5-flash';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function generateFeedback(session) {

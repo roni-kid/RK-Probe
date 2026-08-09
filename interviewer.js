@@ -24,7 +24,7 @@ const MIN_DAYS = 4;
 // Comfortably above MIN_QUESTIONS (8) so it rarely fires in a normal
 // interview; not so high that a stuck interview drags on for dozens of turns.
 const MAX_QUESTIONS = 15;
-const MODEL = 'gemini-3.6-flash';
+const MODEL = 'gemini-3.5-flash';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
