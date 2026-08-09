@@ -642,3 +642,263 @@ mic input, message arrival, or any other app/conversation state.
 **Tool:** Claude (Sonnet)
 
 ---
+
+### 19. Hard safety cap on question count
+
+**Prompt used:**
+"[rk-probe-reliability-polish-plan.md, item 1] — add a hard
+`MAX_QUESTIONS` fallback so an interview can't run indefinitely if a
+candidate gives short/evasive answers and the model never reaches
+`[INTERVIEW_COMPLETE]` with minimums met."
+
+**What was actually implemented:**
+- Added `MAX_QUESTIONS = 15` to `interviewer.js`, with a comment explaining
+  it's a fallback safety net, not the primary completion mechanism — the
+  existing two-part gate (`[INTERVIEW_COMPLETE]` token + `minimumsMet`)
+  still runs first and is unaffected.
+- In `handleTurn`, after `session.questionsAsked` is incremented and the
+  transcript entry is pushed, added a forced-completion branch: if the
+  count has reached `MAX_QUESTIONS`, call `generateFeedback`, set
+  `session.done = true`, and return the same completion shape as a genuine
+  finish — **regardless of `daysCovered.size`**, per the plan's explicit
+  instruction not to gate the forced path on the days minimum.
+- Added a `console.warn` when the forced path fires, logging
+  `questionsAsked` and `daysCovered.size` so it's easy to tell during
+  testing whether it's firing more than expected.
+
+**Companion fix in `feedback.js`:** added a thin-transcript check —
+counted `answeredTurns` (transcript entries with a non-null answer) and,
+when fewer than 2, appended an explicit note to the feedback prompt
+instructing the model to acknowledge the interview was cut short rather
+than produce confident-sounding feedback from sparse data. This only
+changes the prompt text; the JSON shape returned is unchanged.
+
+**Verification:**
+- Wrote a standalone test harness (`run.mjs`) with a stubbed
+  `@google/genai` module that always returns a short, non-completing
+  reply (never emits `[INTERVIEW_COMPLETE]`), simulating a candidate who
+  gives evasive answers ("idk") every turn. Ran `handleTurn` in a loop:
+  confirmed the interview forcibly concluded at exactly
+  `questionsAsked === 15` with `done: true`, even though `daysCovered.size`
+  was only 1 (well under `MIN_DAYS = 4`) — confirming the forced path does
+  **not** wait on the days minimum, as specified.
+- Confirmed `generateFeedback` was still called and returned a normal
+  feedback shape (`summary`/`strengths`/`gaps`/`next`) even on the thin,
+  forced-completion transcript (14 answered questions in the stub run,
+  which is well above the "explicitly note it was cut short" threshold of
+  2 answered turns).
+- Separately verified the redaction boundary the plan flagged as most
+  worth double-checking (see item 23 below) is untouched by this change —
+  every non-final `progress` object still contains only `day`/`title`
+  per focus entry.
+
+**Files touched:** `interviewer.js`, `feedback.js`.
+
+**Tool:** Claude (Sonnet)
+
+---
+
+### 20. `GET /health` endpoint
+
+**Prompt used:**
+"[rk-probe-reliability-polish-plan.md, item 2] — add a fast, cheap health
+check so the live Render deployment can be checked/woken before a demo
+without spending a real interview session."
+
+**What was actually implemented:**
+- Added `app.get('/health', ...)` to `server.js`, returning
+  `{ status: 'ok', service: 'rk-probe', timestamp: <ISO string> }`.
+- Placed it immediately before the existing `/candidates.json` and
+  `/api/interview` routes, per the plan's note that it reads clearly as
+  "check this first" even though Express route order doesn't functionally
+  require it.
+
+**Verification:**
+- `node --check server.js` confirms no syntax errors from the edit.
+- `curl http://localhost:3000/health` (documented as the local check in
+  the plan) returns the expected JSON shape; the live-deployment
+  cold-start check is a manual post-deploy step, not something testable
+  from this environment.
+
+**Files touched:** `server.js`.
+
+**Tool:** Claude (Sonnet)
+
+---
+
+### 21. Retry-once on a failed Gemini call
+
+**Prompt used:**
+"[rk-probe-reliability-polish-plan.md, item 3] — add one shared retry
+helper and wrap the Gemini calls in `interviewer.js` and `feedback.js` so
+a single transient blip doesn't immediately surface as a 500 mid-interview."
+
+**What was actually implemented:**
+- Created `retry.js` with a single exported `withRetry(fn, { retries = 1,
+  delayMs = 500 })` helper, matching the plan's spec exactly — one retry
+  (two attempts total) after a fixed delay, re-throwing the last error if
+  every attempt fails.
+- Wrapped the `ai.models.generateContent(...)` call in `interviewer.js`
+  with `withRetry(() => ...)`, and did the same in `feedback.js`.
+  `transcribe.js` was left unwrapped, matching the plan's "optional, lower
+  priority" note for that file.
+- Left the existing `server.js` error handling untouched — if `withRetry`
+  exhausts its retry, the error still propagates up to the existing
+  try/catch in the `/api/interview` route and returns a normal 500. No
+  silent failure was added anywhere.
+
+**Verification:**
+- Wrote a standalone test script exercising `withRetry` directly with
+  three cases: (1) a function that throws once then succeeds — confirmed
+  it resolved to the success value after exactly 2 calls; (2) a function
+  that always succeeds — confirmed it was called exactly once with ~0ms
+  added latency (no delay incurred when there's no failure); (3) a
+  function that always throws — confirmed it was called exactly 2 times
+  (1 retry) and the original error was re-thrown to the caller rather than
+  swallowed. All three cases passed.
+- Confirmed via `node --check` that `interviewer.js` and `feedback.js`
+  still parse correctly with the wrapped calls.
+
+**Files touched:** `retry.js` (new), `interviewer.js`, `feedback.js`.
+
+**Tool:** Claude (Sonnet)
+
+---
+
+### 22. Restart / new-candidate action in the UI
+
+**Prompt used:**
+"[rk-probe-reliability-polish-plan.md, item 4] — add a way back to the
+candidate picker once an interview has started or completed, without a
+page refresh."
+
+**What was actually implemented:**
+- Added a "New candidate" button (`#restart-button`) to the
+  `chat-panel-header` in `public/index.html`, next to the status dot,
+  hidden by default and pushed to the right edge of the header via
+  `margin-left: auto`.
+- Shown it as soon as an interview successfully starts (in the existing
+  `startButton` click handler), so it's visible for both in-progress and
+  completed interviews, per the plan.
+- Added a `resetToStart()` function in `public/app.js` that clears all
+  client-side state: `sessionId` and `interviewComplete` reset, messages
+  list cleared back to the original empty-state message, the answer form
+  hidden and cleared, feedback section hidden and emptied, candidate/
+  progress side panels hidden and cleared, the `workspace--active` class
+  removed, in-progress voice recording stopped if active, and the
+  candidate `<select>` / `start-button` re-enabled to match their
+  page-load state. Deliberately does **not** call the backend to delete
+  the session — per the plan, the old session is simply left orphaned in
+  the server's in-memory `Map`, consistent with the documented
+  no-persistence scope in `sessions.js`.
+
+**Verification:**
+- Read through the full reset path against every piece of state the app
+  tracks (`sessionId`, `interviewComplete`, DOM content of `#messages`,
+  `#feedback`, `#focus-list`, panel `hidden` attributes, `workspace`
+  class list, button `disabled` state) and confirmed each one is restored
+  to its exact page-load value, matching the plan's verification
+  checklist item-for-item.
+- `node --check app.js` confirms no syntax errors from the edit; confirmed
+  button/DOM tag counts in `index.html` remain balanced.
+
+**Files touched:** `public/index.html`, `public/app.js`, `public/style.css`
+(secondary/ghost `.button-secondary` variant + `.restart-button`
+positioning, reused for item 24's copy button too).
+
+**Tool:** Claude (Sonnet)
+
+---
+
+### 23. Post-interview reasoning reveal
+
+**Prompt used:**
+"[rk-probe-reliability-polish-plan.md, item 5] — reveal the un-redacted
+`focusPlan` (with `reason`) once the interview is done, since that's what
+demonstrates RK Probe's editorial decision-making, while making sure the
+redaction during the interview is untouched."
+
+**What was actually implemented:**
+- Server-side: both completion paths in `interviewer.js` — the genuine
+  `[INTERVIEW_COMPLETE]` + `minimumsMet` path and the `MAX_QUESTIONS`
+  forced-cap path added in item 19 — now include `focusPlan:
+  session.focusPlan` (the full objects, with `reason`) alongside
+  `feedback` in the returned `done: true` response.
+- `buildProgressSummary`, which runs on every non-final turn, was left
+  completely untouched — it still maps `focusPlan` down to only `{ day,
+  title }` per entry, exactly as before.
+- Client-side: added `renderFocusReasoning(focusPlan)` in `public/app.js`,
+  rendering a collapsed `<details>`/`<summary>` block titled "Why these
+  focus areas" beneath the existing summary/strengths/gaps/next content,
+  listing `day`, `title`, and `reason` for each focus entry. Styled in
+  `public/style.css` as visually secondary (smaller, muted text, a
+  top border separating it from the main feedback) so it doesn't compete
+  with the primary feedback content.
+- `renderFeedback` now takes a second `focusPlan` argument; the call site
+  in the `answerForm` submit handler passes `result.focusPlan` through.
+
+**Verification (the item the plan flagged as most worth double-checking):**
+- Wrote a standalone test harness reusing the item-19 stub setup. Ran one
+  non-final turn and confirmed `progress.focusPlan` contained only
+  `day`/`title` — no `reason` key present at all (checked via
+  `JSON.stringify(...).includes('reason')` returning `false`).
+- Ran the same session through to forced completion and confirmed the
+  final `focusPlan` on the `done: true` response **did** include the
+  `reason` field, with its value matching what `contextBuilder.js` would
+  have produced for that entry.
+- This confirms the redaction boundary is exactly where it should be:
+  hidden on every turn before `done: true`, revealed only once.
+
+**Files touched:** `interviewer.js`, `public/index.html` (no structural
+change needed — feedback section already existed), `public/app.js`,
+`public/style.css`.
+
+**Tool:** Claude (Sonnet)
+
+---
+
+### 24. Feedback export/copy button
+
+**Prompt used:**
+"[rk-probe-reliability-polish-plan.md, item 6] — add a copy-to-clipboard
+button for the completed feedback, formatted as clean plain text."
+
+**What was actually implemented:**
+- Added `formatFeedbackAsText(feedback)` in `public/app.js`, converting
+  the feedback object into plain-text lines (a title, the summary, then
+  `Strengths:`/`Gaps:`/`Next steps:` sections with `-`-prefixed bullets,
+  skipping any section that's empty) — no JSON braces or quotes in the
+  output.
+- Added `createCopyFeedbackButton(feedback)`, rendered inside a new
+  `.feedback-header` flex row next to the "Interview feedback" heading
+  (rather than as a separate button elsewhere), using
+  `navigator.clipboard.writeText(...)`. On success the label swaps to
+  "Copied!" for 2 seconds before reverting, matching the transient-status
+  pattern already used for `#voice-status` elsewhere in the app; on
+  failure it shows "Copy failed" for 2 seconds instead of throwing.
+- The button only exists once `renderFeedback` runs (i.e. only after
+  `done: true`), so it can't appear before feedback exists. Clicking it
+  twice in a row is safe — the click handler clears any pending reset
+  timer before scheduling a new one, so rapid double-clicks can't leave
+  the label stuck on "Copied!".
+- No file-download version was added, per the plan's explicit instruction
+  to skip that unless there was spare time.
+
+**Verification:**
+- Traced `formatFeedbackAsText` against a sample feedback object by hand
+  and confirmed the output reads as clean plain text with no stray
+  JSON syntax.
+- Confirmed in the code path that the button is only ever constructed
+  inside `renderFeedback`, which is only ever called from the `done: true`
+  branch of the answer-submit handler — it cannot render before feedback
+  exists.
+- `node --check app.js` confirms no syntax errors; visually re-checked
+  the `.feedback-header` / `.copy-feedback-button` CSS reuses existing
+  tokens only (`--text-secondary`, `--success`, `--border-strong`, spacing
+  scale) — no new colors introduced.
+
+**Files touched:** `public/app.js`, `public/style.css`.
+
+**Tool:** Claude (Sonnet)
+
+---
