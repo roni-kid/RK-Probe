@@ -588,3 +588,57 @@ no JS, no new files, respecting prefers-reduced-motion."
 **Tool:** Claude (Sonnet)
 
 ---
+
+---
+
+### 18. Ambient CSS-only sound-wave bars
+
+**Prompt used:**
+"[sound-wave-handoff.md spec, pasted in full] — implement a minimalist
+CSS-only ambient sound-wave bar animation, decorative only, no JS, no real
+audio/mic wiring, coexisting with the existing background-motion CSS."
+
+**What actually implemented:**
+- 7 thin bar `<span>` elements inside one `.sound-wave` wrapper `<div>`,
+  added directly after `<body>` opens in `public/index.html`. Tried the
+  no-HTML-change route first (per the spec's stated preference) but a
+  single pseudo-element can't independently stagger multiple bars without
+  JS — the spec's own fallback explicitly allows a small markup block in
+  that case, so used one.
+- Each bar animates `transform: scaleY()` (not `height`, to avoid layout
+  recalculation) via one shared `@keyframes wave-bar`, alternating from
+  1x to 2.6x scale over a 2.4s ease-in-out loop.
+- Staggered via seven `nth-child` `animation-delay` rules (0s/0.3s/0.6s/
+  0.9s, mirrored back down) so bars ripple rather than pulse in lockstep.
+- Colors: `var(--accent)` on odd bars, `var(--candidate-accent)` on even
+  bars — the two existing accent tokens already used for interviewer/
+  candidate message bubbles elsewhere in the UI. No new hex values
+  introduced, matching the spec's palette-reuse requirement (adjusted for
+  the fact the spec's listed hex values were from an earlier version of
+  the stylesheet — the current file uses CSS custom properties instead,
+  so pulled from those tokens rather than the spec's literal hex codes).
+- Positioned as a fixed strip along the bottom of the viewport, `z-index:
+  -1`, `pointer-events: none`, `opacity: 0.1` — same opacity range as the
+  existing background-motion gradient, so neither competes with the other
+  or with foreground text.
+- Confirmed it coexists with the prior background-motion `body::before`
+  layer rather than conflicting: used `.sound-wave` as a separate fixed
+  element instead of `body::after`, so both can be independently edited
+  or deleted without touching the other.
+
+**prefers-reduced-motion handling:** no new media query added — confirmed
+the stylesheet's existing blanket rule (`*, *::before, *::after {
+animation-duration: 0.001ms !important; ... }`) already applies to
+`.sound-wave span`, since it's a plain element covered by the universal
+selector.
+
+**Confirmation this is ambient-only:** verified no JS file was touched and
+no event listener, Web Audio API call, or state read was added anywhere —
+the bars run purely on CSS `@keyframes` timing, entirely decoupled from
+mic input, message arrival, or any other app/conversation state.
+
+**Files touched:** `public/style.css`, `public/index.html`.
+
+**Tool:** Claude (Sonnet)
+
+---
