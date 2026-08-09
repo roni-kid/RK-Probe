@@ -5,6 +5,7 @@
 // the exact shape the API contract requires.
 
 import { GoogleGenAI } from '@google/genai';
+import { withRetry } from './retry.js';
 
 const MODEL = 'gemini-3.6-flash';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -13,16 +14,25 @@ export async function generateFeedback(session) {
   const { candidate, transcript } = session;
   const { name, jobRole } = candidate.member ?? candidate;
 
-  const formattedTranscript = transcript
-    .filter(t => t.answer !== null) // skip the opening turn, which has no answer yet
+  const answeredTurns = transcript.filter(t => t.answer !== null); // skip the opening turn, which has no answer yet
+  const formattedTranscript = answeredTurns
     .map((t, i) => `Q${i + 1}: ${t.question}\nA${i + 1}: ${t.answer}`)
     .join('\n\n');
+
+  // If the interview was cut short (e.g. the MAX_QUESTIONS safety cap fired
+  // on a stuck/evasive candidate), the transcript can be very thin. Tell the
+  // model explicitly rather than letting it produce confident-sounding
+  // feedback from a couple of answers.
+  const cutShortNote = answeredTurns.length < 2
+    ? '\n\nNOTE: This interview was cut short and only has a very limited number of answered questions. Explicitly acknowledge in the summary that there was not enough material to fully assess the candidate, rather than producing confident-sounding feedback from this thin data.'
+    : '';
 
   const prompt = `You are reviewing a completed technical interview transcript for feedback purposes.
 
 CANDIDATE: ${name}, ${jobRole}
 FULL TRANSCRIPT:
 ${formattedTranscript}
+${cutShortNote}
 
 Produce structured feedback as JSON with these exact fields:
 - summary: 2-3 sentence overview of performance
@@ -33,10 +43,10 @@ Produce structured feedback as JSON with these exact fields:
 Ground every point in something specific from the transcript. Do not give generic advice.
 Return ONLY valid JSON, no markdown code fences, no extra text before or after.`;
 
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     model: MODEL,
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-  });
+  }));
 
   const rawText = (response.text ?? '').trim();
 

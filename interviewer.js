@@ -13,9 +13,17 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { generateFeedback } from './feedback.js';
+import { withRetry } from './retry.js';
 
 const MIN_QUESTIONS = 8;
 const MIN_DAYS = 4;
+// Fallback safety net only — the primary completion mechanism is still the
+// two-part gate below (model emits [INTERVIEW_COMPLETE] AND minimums met).
+// This just guarantees the interview can never run indefinitely if a
+// candidate gives short/evasive answers that keep the model circling.
+// Comfortably above MIN_QUESTIONS (8) so it rarely fires in a normal
+// interview; not so high that a stuck interview drags on for dozens of turns.
+const MAX_QUESTIONS = 15;
 const MODEL = 'gemini-3.6-flash';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -38,11 +46,11 @@ export async function handleTurn(session, message) {
 
   const systemPrompt = buildSystemPrompt(session);
 
-  const response = await ai.models.generateContent({
+  const response = await withRetry(() => ai.models.generateContent({
     model: MODEL,
     contents: session.history,
     config: { systemInstruction: systemPrompt },
-  });
+  }));
 
   const rawText = response.text ?? '';
 
@@ -60,6 +68,10 @@ export async function handleTurn(session, message) {
       reply: 'Interview completed.',
       done: true,
       feedback,
+      // Un-redacted focus plan (with `reason`) — safe to reveal now that
+      // the interview is over. See buildProgressSummary for why `reason`
+      // stays hidden on every non-final turn.
+      focusPlan: session.focusPlan,
     };
   }
 
@@ -76,6 +88,25 @@ export async function handleTurn(session, message) {
     session.transcript.push({ question: cleanText, answer: message });
   } else {
     session.transcript.push({ question: cleanText, answer: null });
+  }
+
+  // Fallback safety net: if we've blown well past the expected question
+  // count without the model naturally reaching [INTERVIEW_COMPLETE] +
+  // minimumsMet, force the interview to conclude here rather than let it
+  // run indefinitely against a stuck or evasive candidate. This is the
+  // exception path, not the expected one — see MAX_QUESTIONS comment above.
+  if (session.questionsAsked >= MAX_QUESTIONS) {
+    console.warn(
+      `[interviewer] MAX_QUESTIONS safety cap fired (questionsAsked=${session.questionsAsked}, daysCovered=${session.daysCovered.size}/${MIN_DAYS})`
+    );
+    const feedback = await generateFeedback(session);
+    session.done = true;
+    return {
+      reply: 'Interview completed.',
+      done: true,
+      feedback,
+      focusPlan: session.focusPlan,
+    };
   }
 
   return {
