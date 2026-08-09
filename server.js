@@ -22,6 +22,13 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
+// Cheap liveness check — lets us confirm the live deployment is up before a
+// demo, and wake it from Render's free-tier cold start without burning a
+// real interview session just to check.
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'rk-probe', timestamp: new Date().toISOString() });
+});
+
 // The browser UI reads the supplied demo candidates from this static file.
 app.get('/candidates.json', (req, res) => {
   res.sendFile('candidates.json', { root: process.cwd() });
