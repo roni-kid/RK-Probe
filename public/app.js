@@ -24,6 +24,7 @@ const daysProgressFill = document.querySelector('#days-progress-fill');
 const daysProgressCaption = document.querySelector('#days-progress-caption');
 const focusList = document.querySelector('#focus-list');
 const workspace = document.querySelector('.workspace');
+const restartButton = document.querySelector('#restart-button');
 
 let candidates = [];
 let sessionId = null;
@@ -95,18 +96,104 @@ function createFeedbackList(title, items) {
   feedbackSection.append(heading, list);
 }
 
-function renderFeedback(feedback) {
+// Formats the feedback object as clean plain text for the clipboard — no
+// stray JSON braces/quotes, just readable summary + bulleted sections.
+function formatFeedbackAsText(feedback) {
+  const lines = ['RK Probe — Interview Feedback', ''];
+  lines.push('Summary:');
+  lines.push(feedback?.summary || 'No written feedback was returned.');
+
+  const section = (title, items) => {
+    if (!items || items.length === 0) return;
+    lines.push('', `${title}:`);
+    items.forEach((item) => lines.push(`- ${item}`));
+  };
+  section('Strengths', feedback?.strengths);
+  section('Gaps', feedback?.gaps);
+  section('Next steps', feedback?.next);
+
+  return lines.join('\n');
+}
+
+function createCopyFeedbackButton(feedback) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'copy-feedback-button button-secondary';
+  const label = document.createElement('span');
+  label.className = 'btn-label';
+  label.textContent = 'Copy feedback';
+  button.append(label);
+
+  let resetTimer = null;
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(formatFeedbackAsText(feedback));
+      label.textContent = 'Copied!';
+      button.classList.add('is-copied');
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        label.textContent = 'Copy feedback';
+        button.classList.remove('is-copied');
+      }, 2000);
+    } catch {
+      label.textContent = 'Copy failed';
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        label.textContent = 'Copy feedback';
+      }, 2000);
+    }
+  });
+
+  return button;
+}
+
+// The `reason` each focus day was chosen is deliberately redacted from the
+// `progress` object during the interview (see interviewer.js), but once the
+// interview is done, revealing it demonstrates RK Probe's editorial
+// decision-making. Kept visually secondary (collapsed by default) since the
+// feedback itself is still the primary content a candidate cares about.
+function renderFocusReasoning(focusPlan) {
+  if (!focusPlan || focusPlan.length === 0) return null;
+
+  const details = document.createElement('details');
+  details.className = 'focus-reasoning';
+  const summaryEl = document.createElement('summary');
+  summaryEl.textContent = 'Why these focus areas';
+  const list = document.createElement('ul');
+
+  focusPlan.forEach((focusDay) => {
+    const item = document.createElement('li');
+    const label = document.createElement('strong');
+    label.textContent = `Day ${focusDay.day} — ${focusDay.title}: `;
+    item.append(label, document.createTextNode(focusDay.reason || ''));
+    list.append(item);
+  });
+
+  details.append(summaryEl, list);
+  return details;
+}
+
+function renderFeedback(feedback, focusPlan) {
   feedbackSection.replaceChildren();
+
+  const header = document.createElement('div');
+  header.className = 'feedback-header';
   const title = document.createElement('h2');
   title.textContent = 'Interview feedback';
+  header.append(title, createCopyFeedbackButton(feedback));
+
   const summaryHeading = document.createElement('h3');
   summaryHeading.textContent = 'Summary';
   const summary = document.createElement('p');
   summary.textContent = feedback?.summary || 'No written feedback was returned.';
-  feedbackSection.append(title, summaryHeading, summary);
+  feedbackSection.append(header, summaryHeading, summary);
   createFeedbackList('Strengths', feedback?.strengths);
   createFeedbackList('Gaps', feedback?.gaps);
   createFeedbackList('Next steps', feedback?.next);
+
+  const reasoning = renderFocusReasoning(focusPlan);
+  if (reasoning) feedbackSection.append(reasoning);
+
   feedbackSection.hidden = false;
 }
 
@@ -418,6 +505,46 @@ if (!micButton.hidden) {
   micButton.addEventListener('touchcancel', stopRecording);
 }
 
+// Resets all client-side state back to the initial candidate-picker view so
+// judges can try another candidate without a page refresh. Doesn't call the
+// backend to delete the old session — it simply becomes orphaned in the
+// server's in-memory Map, which is fine given the documented no-persistence
+// scope (see sessions.js).
+function resetToStart() {
+  sessionId = null;
+  interviewComplete = false;
+
+  messages.replaceChildren();
+  const emptyState = document.createElement('p');
+  emptyState.className = 'empty-state';
+  emptyState.textContent = 'Select a candidate to begin.';
+  messages.append(emptyState);
+
+  answerForm.hidden = true;
+  answerInput.value = '';
+  typingIndicator.hidden = true;
+
+  feedbackSection.hidden = true;
+  feedbackSection.replaceChildren();
+
+  candidatePanel.hidden = true;
+  progressPanel.hidden = true;
+  focusList.replaceChildren();
+  workspace.classList.remove('workspace--active');
+
+  restartButton.hidden = true;
+  if (isRecording) stopRecording();
+  clearVoiceStatus();
+  clearError();
+  setStatus(null, 'Waiting to start');
+
+  // Match the original page-load enabled/disabled state.
+  candidateSelect.disabled = candidates.length === 0;
+  startButton.disabled = candidates.length === 0;
+}
+
+restartButton.addEventListener('click', resetToStart);
+
 startButton.addEventListener('click', async () => {
   clearError();
   sessionId = createSessionId();
@@ -434,6 +561,7 @@ startButton.addEventListener('click', async () => {
     renderCandidatePanel(candidate);
     renderProgress(result.progress);
     workspace.classList.add('workspace--active');
+    restartButton.hidden = false;
   } catch (error) {
     sessionId = null;
     showError(error.message);
@@ -459,7 +587,7 @@ answerForm.addEventListener('submit', async (event) => {
     if (result.done) {
       interviewComplete = true;
       answerForm.hidden = true;
-      renderFeedback(result.feedback);
+      renderFeedback(result.feedback, result.focusPlan);
       setStatus('is-done', 'Interview complete');
     } else {
       renderProgress(result.progress);

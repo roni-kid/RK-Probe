@@ -525,6 +525,31 @@ button:disabled {
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
+/* Secondary/ghost button variant — used for actions that shouldn't compete
+   visually with the primary accent buttons (Start interview / Send). */
+.button-secondary {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: var(--bg-surface-raised);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.button-secondary:disabled {
+  background: transparent;
+  border-color: var(--border);
+}
+
+.restart-button {
+  margin-left: auto;
+}
+
 .status-text {
   color: var(--text-secondary);
   font-size: 0.85rem;
@@ -705,10 +730,27 @@ button:disabled {
    ========================================================= */
 .feedback { padding: var(--space-5); }
 
+.feedback-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  margin: 0 0 var(--space-4);
+}
+
 .feedback h2 {
   font-family: var(--font-display);
   font-size: 1.4rem;
-  margin: 0 0 var(--space-4);
+  margin: 0;
+}
+
+.copy-feedback-button {
+  flex-shrink: 0;
+}
+
+.copy-feedback-button.is-copied {
+  border-color: var(--success);
+  color: var(--success);
 }
 
 .feedback h3 {
@@ -741,6 +783,49 @@ button:disabled {
   line-height: 1.5;
   padding: var(--space-3) var(--space-4);
 }
+
+.focus-reasoning {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+}
+
+.focus-reasoning summary {
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.focus-reasoning summary::-webkit-details-marker { display: none; }
+
+.focus-reasoning summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: var(--space-2);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.focus-reasoning[open] summary::before { transform: rotate(90deg); }
+
+.focus-reasoning ul {
+  display: grid;
+  gap: var(--space-2);
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.focus-reasoning li {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.focus-reasoning li strong { color: var(--text-primary); }
 
 .sr-only {
   clip: rect(0, 0, 0, 0);
