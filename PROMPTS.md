@@ -902,3 +902,58 @@ button for the completed feedback, formatted as clean plain text."
 **Tool:** Claude (Sonnet)
 
 ---
+
+### 25. Fix: sound-wave effect wasn't circular / was confined to the footer
+
+**Prompt used:**
+"Was expecting circular sound waves moving through the background, not a
+small thing at the footer of the site." (with a screenshot showing the
+prior bar-strip implementation at the bottom edge of the viewport)
+
+**Root cause:** item 18's implementation interpreted "sound wave" as an
+equalizer-style bar visualizer, which is a real ambient-audio motif but
+not a circular one, and positioned it as a fixed strip pinned to the
+bottom of the viewport rather than something moving through the
+background at large.
+
+**What was actually implemented:**
+- Kept the same `.sound-wave` wrapper and the same 7 `<span>` elements in
+  `public/index.html` (no markup change needed) — only restyled them.
+- `.sound-wave` now spans the full viewport (`inset: 0`) and centers its
+  children, instead of being pinned to a 64px-tall strip along the bottom
+  edge.
+- Each `span` is now a circular ring (`border-radius: 50%`, thin border
+  instead of a filled bar) that continuously scales up from `0.15` to `9`
+  while fading from `opacity: 0.32` to `0` via one `@keyframes
+  sonar-ring` block, on a 7s loop.
+- The 7 rings are staggered 1s apart (`animation-delay: 0s` through `6s`)
+  so a new ring keeps emerging from the center as each previous one fades
+  out near the edges — giving the "moving through the background" motion
+  the prompt asked for, rather than 7 static bars pulsing in place.
+- Colors still alternate between the same two existing accent tokens
+  (`--accent`, `--candidate-accent`) used everywhere else in the UI — no
+  new colors introduced, keeping the palette-reuse constraint from the
+  original spec (item 17/18) intact.
+- Left `z-index: -1` and `pointer-events: none` unchanged, so this still
+  never intercepts clicks or affects layout, and still coexists with the
+  separate `body::before` background-motion gradient from item 17 without
+  conflicting (still two independent fixed layers).
+- No JS was touched; the blanket `prefers-reduced-motion` rule already in
+  the stylesheet (from item 17) still covers `.sound-wave span` as a plain
+  element under the universal selector, so no second media query was
+  needed.
+
+**Verification:**
+- `python3` brace-count check on `style.css` confirms no unbalanced
+  braces were introduced by the edit (144 open, 144 close).
+- Re-read the new `.sound-wave`/`sonar-ring` rules end-to-end to confirm
+  the rings originate from the viewport center and scale outward evenly
+  in both directions (`display: flex; align-items: center; justify-content:
+  center` on the fixed, full-viewport wrapper), rather than only being
+  visible in one corner or clipped by the previous fixed-height strip.
+
+**Files touched:** `public/style.css` only (no HTML or JS changes).
+
+**Tool:** Claude (Sonnet)
+
+---

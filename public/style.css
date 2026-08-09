@@ -89,53 +89,51 @@ body::before {
   100% { background-position: 0% 0%, 100% 100%; }
 }
 
-/* Ambient sound-wave bars — purely decorative, does not read real audio,
-   mic input, or app/conversation state in any way. A fixed strip of thin
-   bars along the bottom of the viewport, each scaling its height up and
-   down on its own offset loop so they don't move in lockstep. Uses only
-   the two existing accent tokens (--accent, --candidate-accent) already
-   doing visual work elsewhere in the UI. Sits behind all content and never
-   intercepts clicks. */
+/* Ambient circular sound waves — purely decorative, does not read real
+   audio, mic input, or app/conversation state in any way. A set of rings
+   centered on the viewport, each continuously expanding outward and
+   fading as it grows, staggered so new rings keep emerging behind the
+   ones ahead of them — like a sonar ping moving through the background.
+   Uses only the two existing accent tokens (--accent, --candidate-accent)
+   already doing visual work elsewhere in the UI. Sits behind all content
+   (z-index: -1) and never intercepts clicks. */
 .sound-wave {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 64px;
+  inset: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  gap: var(--space-2);
   z-index: -1;
   pointer-events: none;
-  opacity: 0.1;
+  overflow: hidden;
 }
 
 .sound-wave span {
-  display: block;
-  width: 4px;
-  height: 16px;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  transform-origin: bottom;
-  animation: wave-bar 2.4s ease-in-out infinite;
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: sonar-ring 7s var(--ease-out) infinite;
 }
 
 .sound-wave span:nth-child(even) {
-  background: var(--candidate-accent);
+  border-color: var(--candidate-accent);
 }
 
 .sound-wave span:nth-child(1) { animation-delay: 0s; }
-.sound-wave span:nth-child(2) { animation-delay: 0.3s; }
-.sound-wave span:nth-child(3) { animation-delay: 0.6s; }
-.sound-wave span:nth-child(4) { animation-delay: 0.9s; }
-.sound-wave span:nth-child(5) { animation-delay: 0.6s; }
-.sound-wave span:nth-child(6) { animation-delay: 0.3s; }
-.sound-wave span:nth-child(7) { animation-delay: 0s; }
+.sound-wave span:nth-child(2) { animation-delay: 1s; }
+.sound-wave span:nth-child(3) { animation-delay: 2s; }
+.sound-wave span:nth-child(4) { animation-delay: 3s; }
+.sound-wave span:nth-child(5) { animation-delay: 4s; }
+.sound-wave span:nth-child(6) { animation-delay: 5s; }
+.sound-wave span:nth-child(7) { animation-delay: 6s; }
 
-@keyframes wave-bar {
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(2.6); }
+@keyframes sonar-ring {
+  0%   { transform: scale(0.15); opacity: 0.32; }
+  70%  { opacity: 0.08; }
+  100% { transform: scale(9); opacity: 0; }
 }
 
 * { box-sizing: border-box; }
