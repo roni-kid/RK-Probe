@@ -283,7 +283,6 @@ h1 {
    ========================================================= */
 .start-panel,
 .chat-panel,
-.feedback,
 .side-panel {
   background:
     linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 40%),
@@ -533,6 +532,32 @@ h1 {
    Replaces the old dropdown+button start panel — one card per
    demo candidate, each with its own "Start interview" button.
    ========================================================= */
+.candidate-search {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  margin: var(--space-3) 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  width: 100%;
+}
+
+.candidate-search:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 1px;
+}
+
+.candidate-search::placeholder {
+  color: var(--text-muted);
+}
+
+#candidate-search-empty {
+  padding: var(--space-4) 0 0;
+}
+
 .candidate-grid {
   display: grid;
   gap: var(--space-4);
@@ -906,9 +931,23 @@ button:disabled {
 }
 
 /* =========================================================
-   Feedback panel
+   Feedback panel — deliberately distinct from every other panel:
+   this is the payoff moment after 8+ questions, so it gets its own
+   entrance treatment (top accent bar, fade-up) and its Strengths/Gaps
+   lists are color-coded rather than uniform, so the shape of the
+   feedback is scannable before reading a single word.
    ========================================================= */
-.feedback { padding: var(--space-5); }
+.feedback {
+  animation: feedback-arrive var(--duration-base) var(--ease-out);
+  border-top: 3px solid var(--accent);
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  position: relative;
+}
+
+@keyframes feedback-arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .feedback-header {
   align-items: center;
@@ -920,8 +959,17 @@ button:disabled {
 
 .feedback h2 {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   margin: 0;
+}
+
+.feedback-eyebrow {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-1);
+  text-transform: uppercase;
 }
 
 .copy-feedback-button {
@@ -957,11 +1005,23 @@ button:disabled {
 .feedback li {
   background: var(--bg-surface-raised);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 0.94rem;
   line-height: 1.5;
   padding: var(--space-3) var(--space-4);
+}
+
+/* Strengths and Gaps get their own left-border color so the overall
+   shape of the feedback — mostly green, mostly amber, balanced — is
+   readable at a glance before scanning individual bullet text. */
+.feedback-list-strengths li {
+  border-left-color: var(--success);
+}
+
+.feedback-list-gaps li {
+  border-left-color: var(--danger);
 }
 
 .focus-reasoning {

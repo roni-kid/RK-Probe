@@ -23,9 +23,18 @@
 
       <section class="start-panel" aria-labelledby="candidate-label">
         <h2 id="candidate-label">Demo candidates</h2>
+        <label class="sr-only" for="candidate-search">Search candidates by name or role</label>
+        <input
+          id="candidate-search"
+          class="candidate-search"
+          type="search"
+          placeholder="Search by name or role…"
+          autocomplete="off"
+        >
         <div id="candidate-grid" class="candidate-grid" aria-live="polite">
           <p class="empty-state">Loading candidates…</p>
         </div>
+        <p id="candidate-search-empty" class="empty-state" hidden>No candidates match "<span id="candidate-search-term"></span>".</p>
       </section>
 
       <section id="loading-view" class="loading-view" aria-live="polite" hidden>

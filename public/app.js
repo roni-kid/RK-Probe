@@ -1,4 +1,7 @@
 const candidateGrid = document.querySelector('#candidate-grid');
+const candidateSearchInput = document.querySelector('#candidate-search');
+const candidateSearchEmpty = document.querySelector('#candidate-search-empty');
+const candidateSearchTerm = document.querySelector('#candidate-search-term');
 const startPanel = document.querySelector('.start-panel');
 const loadingView = document.querySelector('#loading-view');
 const loadingViewText = document.querySelector('#loading-view-text');
@@ -85,10 +88,11 @@ async function callInterviewApi(payload) {
   return body;
 }
 
-function createFeedbackList(title, items) {
+function createFeedbackList(title, items, listClassName) {
   const heading = document.createElement('h3');
   heading.textContent = title;
   const list = document.createElement('ul');
+  if (listClassName) list.className = listClassName;
   (items || []).forEach((item) => {
     const listItem = document.createElement('li');
     listItem.textContent = item;
@@ -177,19 +181,25 @@ function renderFocusReasoning(focusPlan) {
 function renderFeedback(feedback, focusPlan) {
   feedbackSection.replaceChildren();
 
+  const eyebrow = document.createElement('p');
+  eyebrow.className = 'feedback-eyebrow';
+  eyebrow.textContent = 'Interview complete';
+
   const header = document.createElement('div');
   header.className = 'feedback-header';
   const title = document.createElement('h2');
   title.textContent = 'Interview feedback';
   header.append(title, createCopyFeedbackButton(feedback));
 
+  feedbackSection.append(eyebrow, header);
+
   const summaryHeading = document.createElement('h3');
   summaryHeading.textContent = 'Summary';
   const summary = document.createElement('p');
   summary.textContent = feedback?.summary || 'No written feedback was returned.';
-  feedbackSection.append(header, summaryHeading, summary);
-  createFeedbackList('Strengths', feedback?.strengths);
-  createFeedbackList('Gaps', feedback?.gaps);
+  feedbackSection.append(summaryHeading, summary);
+  createFeedbackList('Strengths', feedback?.strengths, 'feedback-list-strengths');
+  createFeedbackList('Gaps', feedback?.gaps, 'feedback-list-gaps');
   createFeedbackList('Next steps', feedback?.next);
 
   const reasoning = renderFocusReasoning(focusPlan);
@@ -254,14 +264,15 @@ function createCandidateCard(candidate, index) {
   const progressLabel = document.createElement('div');
   progressLabel.className = 'candidate-card-progress-label';
   const progressLabelText = document.createElement('span');
-  progressLabelText.textContent = 'Curriculum progress';
+  progressLabelText.textContent = 'Missions passed';
   const progressLabelValue = document.createElement('span');
   progressLabelValue.textContent = `${completed}/${total}`;
   progressLabel.append(progressLabelText, progressLabelValue);
   const barTrack = document.createElement('div');
   barTrack.className = 'candidate-card-bar-track';
+  barTrack.title = `${completed} of ${total} curriculum missions passed`;
   barTrack.setAttribute('role', 'progressbar');
-  barTrack.setAttribute('aria-label', `${member.name || 'Candidate'} curriculum progress`);
+  barTrack.setAttribute('aria-label', `${member.name || 'Candidate'} curriculum progress: ${completed} of ${total} missions passed`);
   barTrack.setAttribute('aria-valuemin', '0');
   barTrack.setAttribute('aria-valuemax', String(total));
   barTrack.setAttribute('aria-valuenow', String(completed));
@@ -284,10 +295,32 @@ function createCandidateCard(candidate, index) {
   return card;
 }
 
-function renderCandidateCards() {
+function renderCandidateCards(list = candidates) {
   candidateGrid.replaceChildren();
-  candidates.forEach((candidate, index) => {
+  candidateSearchEmpty.hidden = true;
+
+  if (list.length === 0) {
+    candidateSearchTerm.textContent = candidateSearchInput.value.trim();
+    candidateSearchEmpty.hidden = false;
+    return;
+  }
+
+  list.forEach((candidate, index) => {
     candidateGrid.append(createCandidateCard(candidate, index));
+  });
+}
+
+// Matches on name or job role, case-insensitive. Deliberately simple — this
+// is a demo aid for quickly finding a candidate during a live judging
+// session, not a real search feature, so no fuzzy matching or debouncing
+// beyond the 'input' event's natural pacing is needed for 12 candidates.
+function filterCandidates(query) {
+  const term = query.trim().toLowerCase();
+  if (!term) return candidates;
+  return candidates.filter((candidate) => {
+    const member = candidate.member ?? candidate;
+    const haystack = `${member.name || ''} ${member.jobRole || ''}`.toLowerCase();
+    return haystack.includes(term);
   });
 }
 
@@ -621,9 +654,16 @@ function resetToStart() {
 
   startPanel.hidden = false;
   loadingView.hidden = true;
+
+  candidateSearchInput.value = '';
+  renderCandidateCards();
 }
 
 restartButton.addEventListener('click', resetToStart);
+
+candidateSearchInput.addEventListener('input', () => {
+  renderCandidateCards(filterCandidates(candidateSearchInput.value));
+});
 
 async function startInterview(candidate) {
   clearError();
