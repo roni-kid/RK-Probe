@@ -1143,3 +1143,31 @@ toggling only."
 
 **Tool:** Claude (Sonnet)
 **Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
+
+---
+
+### 30. Remove redundant empty chat panel on initial page load
+
+**Prompt used:**
+"The bottom section (chat panel showing 'Waiting to start' / 'Select a
+candidate to begin') is redundant on the initial grid page since it gets
+replaced anyway once an interview starts — remove it from the first view."
+
+**What actually happened:**
+- Root cause: `.workspace` (containing the chat panel + both side panels)
+  had no `hidden` attribute at all — only its inner panels
+  (`candidate-panel`, `progress-panel`) were individually hidden. The chat
+  panel itself always rendered, even pre-interview.
+- Added `hidden` to `.workspace` in `index.html` by default.
+- `app.js`: `startInterview()` now sets `workspace.hidden = false` alongside
+  the existing `workspace.classList.add('workspace--active')` when an
+  interview successfully starts. `resetToStart()` sets `workspace.hidden =
+  true` back, in addition to removing the `--active` class.
+- Verified this doesn't conflict with anything: the existing
+  `[hidden] { display: none !important; }` rule in style.css already
+  guarantees `hidden` beats `.workspace`'s `display: grid`, and the
+  `max-width: 960px` responsive `order:` rules on the workspace's children
+  are irrelevant once the whole parent is hidden.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `public/index.html`, `public/app.js`

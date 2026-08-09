@@ -611,6 +611,7 @@ function resetToStart() {
   progressPanel.hidden = true;
   focusList.replaceChildren();
   workspace.classList.remove('workspace--active');
+  workspace.hidden = true;
 
   restartButton.hidden = true;
   if (isRecording) stopRecording();
@@ -645,6 +646,7 @@ async function startInterview(candidate) {
     setStatus('is-live', 'Interview in progress');
     renderCandidatePanel(candidate);
     renderProgress(result.progress);
+    workspace.hidden = false;
     workspace.classList.add('workspace--active');
     restartButton.hidden = false;
   } catch (error) {
