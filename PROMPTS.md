@@ -957,3 +957,59 @@ background at large.
 **Tool:** Claude (Sonnet)
 
 ---
+
+### 26. Scatter the sound waves across randomized background positions
+
+**Prompt used:**
+"Have the 5 sound waves spreading at randomized locations on the
+background."
+
+**What was actually implemented:**
+- Trimmed `public/index.html`'s `.sound-wave` markup from 7 `<span>`s down
+  to 5, matching the requested count.
+- Removed the shared `display: flex; align-items: center; justify-content:
+  center` centering on `.sound-wave` from item 25 — that was what made
+  every ring share one origin point (the viewport center). The wrapper is
+  now just a `position: fixed; inset: 0` container with `overflow:
+  hidden`.
+- Each of the 5 `span`s now gets its own fixed `left`/`top` percentage
+  anchor (`nth-child(1)` through `nth-child(5)`), scattered across the
+  viewport rather than sharing one center — e.g. one near the top-left,
+  one top-right, one center-ish, two toward the bottom corners — with
+  `margin: -halfWidth 0 0 -halfWidth` used to center each ring on its own
+  anchor point (avoids needing a `transform: translate(...)` that would
+  otherwise conflict with the existing `scale()` keyframe animation on the
+  same property).
+- Gave each ring a slightly different size (110–170px) and animation
+  `duration` (6–8s) alongside its own `animation-delay`, so the five don't
+  read as one pattern stamped at different spots — they expand at
+  different rates and reach different maximum extents, which reads as more
+  organic/independent than uniform copies would.
+- `@keyframes sonar-ring` itself (scale 0.15→9, opacity 0.32→0.08→0) is
+  unchanged from item 25 — only where and how each ring is positioned and
+  timed changed.
+- Note on "randomized": since this stayed pure CSS (per the earlier
+  Python/JS discussion — no runtime cost, no extra dependency, this is
+  still a small fixed set of decorative elements with no state dependency,
+  so CSS remains the right tool), the 5 positions are fixed-but-scattered
+  values rather than re-randomized on every page load. True per-load
+  randomization would need a few lines of JS to set random `left`/`top`
+  inline styles on page load — flagged here in case that's actually
+  wanted, but not added since it wasn't asked for and the reliability plan
+  says to resist unrequested scope beyond what's asked.
+
+**Verification:**
+- `node` span-count check on `index.html` confirms exactly 5 `<span>`
+  elements inside `.sound-wave`.
+- Python brace-count check on `style.css` confirms balanced braces (142
+  open, 142 close) after the edit.
+- Read through the five `nth-child` position rules to confirm they're
+  spread across distinct regions of the viewport (roughly one per
+  quadrant plus one central) rather than clustered or overlapping the same
+  spot.
+
+**Files touched:** `public/index.html`, `public/style.css`.
+
+**Tool:** Claude (Sonnet)
+
+---

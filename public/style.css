@@ -90,19 +90,17 @@ body::before {
 }
 
 /* Ambient circular sound waves — purely decorative, does not read real
-   audio, mic input, or app/conversation state in any way. A set of rings
-   centered on the viewport, each continuously expanding outward and
-   fading as it grows, staggered so new rings keep emerging behind the
-   ones ahead of them — like a sonar ping moving through the background.
-   Uses only the two existing accent tokens (--accent, --candidate-accent)
-   already doing visual work elsewhere in the UI. Sits behind all content
-   (z-index: -1) and never intercepts clicks. */
+   audio, mic input, or app/conversation state in any way. Five rings, each
+   anchored to its own fixed point scattered across the viewport (not a
+   single shared center), continuously expanding outward and fading as
+   they grow — like independent sonar pings scattered through the
+   background rather than one ripple. Uses only the two existing accent
+   tokens (--accent, --candidate-accent) already doing visual work
+   elsewhere in the UI. Sits behind all content (z-index: -1) and never
+   intercepts clicks. */
 .sound-wave {
   position: fixed;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
@@ -112,6 +110,7 @@ body::before {
   position: absolute;
   width: 140px;
   height: 140px;
+  margin: -70px 0 0 -70px; /* centers the ring on its left/top anchor point */
   border: 1px solid var(--accent);
   border-radius: 50%;
   opacity: 0;
@@ -122,13 +121,52 @@ body::before {
   border-color: var(--candidate-accent);
 }
 
-.sound-wave span:nth-child(1) { animation-delay: 0s; }
-.sound-wave span:nth-child(2) { animation-delay: 1s; }
-.sound-wave span:nth-child(3) { animation-delay: 2s; }
-.sound-wave span:nth-child(4) { animation-delay: 3s; }
-.sound-wave span:nth-child(5) { animation-delay: 4s; }
-.sound-wave span:nth-child(6) { animation-delay: 5s; }
-.sound-wave span:nth-child(7) { animation-delay: 6s; }
+/* Five scattered anchor points (percentages of the viewport), each with
+   its own animation delay and slightly varied duration/size so the rings
+   read as independent and organic rather than a single synchronized
+   pattern repeated at different spots. */
+.sound-wave span:nth-child(1) {
+  left: 18%;
+  top: 22%;
+  animation-delay: 0s;
+}
+
+.sound-wave span:nth-child(2) {
+  left: 82%;
+  top: 16%;
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  animation-delay: 1.6s;
+  animation-duration: 6s;
+}
+
+.sound-wave span:nth-child(3) {
+  left: 50%;
+  top: 58%;
+  width: 170px;
+  height: 170px;
+  margin: -85px 0 0 -85px;
+  animation-delay: 3.1s;
+  animation-duration: 8s;
+}
+
+.sound-wave span:nth-child(4) {
+  left: 12%;
+  top: 82%;
+  animation-delay: 4.5s;
+  animation-duration: 7.5s;
+}
+
+.sound-wave span:nth-child(5) {
+  left: 86%;
+  top: 78%;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  animation-delay: 5.7s;
+  animation-duration: 6.5s;
+}
 
 @keyframes sonar-ring {
   0%   { transform: scale(0.15); opacity: 0.32; }
