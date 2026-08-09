@@ -90,14 +90,15 @@ body::before {
 }
 
 /* Ambient circular sound waves — purely decorative, does not read real
-   audio, mic input, or app/conversation state in any way. Five rings, each
-   anchored to its own fixed point scattered across the viewport (not a
-   single shared center), continuously expanding outward and fading as
-   they grow — like independent sonar pings scattered through the
-   background rather than one ripple. Uses only the two existing accent
-   tokens (--accent, --candidate-accent) already doing visual work
-   elsewhere in the UI. Sits behind all content (z-index: -1) and never
-   intercepts clicks. */
+   audio, mic input, or app/conversation state in any way. Five anchor
+   points scattered across the viewport, each one a genuine ripple: three
+   concentric rings (the span itself plus its ::before/::after) that share
+   the same center and expand/fade on the same loop, just offset in time —
+   like three rings from one stone dropped in water, rather than a single
+   lone circle per point. Uses only the two existing accent tokens
+   (--accent, --candidate-accent) already doing visual work elsewhere in
+   the UI. Sits behind all content (z-index: -1) and never intercepts
+   clicks. */
 .sound-wave {
   position: fixed;
   inset: 0;
@@ -115,20 +116,42 @@ body::before {
   border-radius: 50%;
   opacity: 0;
   animation: sonar-ring 7s var(--ease-out) infinite;
+  animation-delay: var(--delay, 0s);
 }
 
 .sound-wave span:nth-child(even) {
   border-color: var(--candidate-accent);
 }
 
+/* The second and third ripple in each point: same size/position/color as
+   the span (inherited via `inset: 0` against the span's own positioned
+   box, and `border: inherit` / `animation: inherit`), just fired
+   `--ripple-gap` later so they trail the first ring outward instead of
+   overlapping it exactly. */
+.sound-wave span::before,
+.sound-wave span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: inherit;
+  border-radius: 50%;
+  opacity: 0;
+  animation: inherit;
+}
+
+.sound-wave span::before { animation-delay: calc(var(--delay, 0s) + var(--ripple-gap, 0.9s)); }
+.sound-wave span::after  { animation-delay: calc(var(--delay, 0s) + var(--ripple-gap, 0.9s) * 2); }
+
 /* Five scattered anchor points (percentages of the viewport), each with
-   its own animation delay and slightly varied duration/size so the rings
-   read as independent and organic rather than a single synchronized
-   pattern repeated at different spots. */
+   its own animation delay and slightly varied duration/size so the
+   ripples read as independent and organic rather than a single
+   synchronized pattern repeated at different spots. --delay feeds the
+   ::before/::after offsets above so all three rings in a ripple share the
+   same base timing. */
 .sound-wave span:nth-child(1) {
   left: 18%;
   top: 22%;
-  animation-delay: 0s;
+  --delay: 0s;
 }
 
 .sound-wave span:nth-child(2) {
@@ -137,8 +160,9 @@ body::before {
   width: 110px;
   height: 110px;
   margin: -55px 0 0 -55px;
-  animation-delay: 1.6s;
+  --delay: 1.6s;
   animation-duration: 6s;
+  --ripple-gap: 0.75s;
 }
 
 .sound-wave span:nth-child(3) {
@@ -147,14 +171,15 @@ body::before {
   width: 170px;
   height: 170px;
   margin: -85px 0 0 -85px;
-  animation-delay: 3.1s;
+  --delay: 3.1s;
   animation-duration: 8s;
+  --ripple-gap: 1s;
 }
 
 .sound-wave span:nth-child(4) {
   left: 12%;
   top: 82%;
-  animation-delay: 4.5s;
+  --delay: 4.5s;
   animation-duration: 7.5s;
 }
 
@@ -164,8 +189,9 @@ body::before {
   width: 120px;
   height: 120px;
   margin: -60px 0 0 -60px;
-  animation-delay: 5.7s;
+  --delay: 5.7s;
   animation-duration: 6.5s;
+  --ripple-gap: 0.8s;
 }
 
 @keyframes sonar-ring {
