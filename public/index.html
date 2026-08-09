@@ -22,14 +22,9 @@
       </header>
 
       <section class="start-panel" aria-labelledby="candidate-label">
-        <label id="candidate-label" for="candidate-select">Demo candidate</label>
-        <div class="start-controls">
-          <select id="candidate-select" disabled>
-            <option>Loading candidates…</option>
-          </select>
-          <button id="start-button" type="button" disabled>
-            <span class="btn-label">Start interview</span>
-          </button>
+        <h2 id="candidate-label">Demo candidates</h2>
+        <div id="candidate-grid" class="candidate-grid" aria-live="polite">
+          <p class="empty-state">Loading candidates…</p>
         </div>
       </section>
 

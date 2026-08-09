@@ -40,6 +40,8 @@ rk-probe/
 ├── contextBuilder.js    Candidate signals -> prioritized focusPlan
 ├── interviewer.js       Gemini turn logic, completion gate, day tracking
 ├── feedback.js          Gemini call -> structured JSON feedback
+├── retry.js              Shared retry-once wrapper around Gemini calls
+├── transcribe.js         Fallback voice transcription (non-Firefox-native browsers)
 ├── curriculum.json      Provided course data (31 days, 8 modules)
 ├── candidates.json      Provided sample candidates, used for local testing
 ├── public/              Vanilla browser UI served by Express
@@ -88,6 +90,15 @@ interview, scoring, or model logic.
 
 ## API usage example
 
+**Health check** — confirms the server is up (useful for waking a Render
+free-tier deployment from a cold start before a demo, without spending a
+real interview session on it):
+
+```bash
+curl -s http://localhost:3000/health
+```
+Response: `{ "status": "ok", "service": "rk-probe", "timestamp": "..." }`
+
 **Start an interview** — pass a full candidate object matching the
 `candidates.json` schema:
 
@@ -120,7 +131,9 @@ curl -s -X POST http://localhost:3000/api/interview \
   -d '{ "sessionId": "abc-123", "message": "Embeddings turn text into vectors..." }'
 ```
 
-**When the interview concludes**, the response includes structured feedback:
+**When the interview concludes**, the response includes structured feedback
+and the un-redacted focus plan RK Probe used to guide the interview — safe to
+reveal now that the interview is over:
 
 ```json
 {
@@ -131,9 +144,23 @@ curl -s -X POST http://localhost:3000/api/interview \
     "strengths": ["..."],
     "gaps": ["..."],
     "next": ["..."]
-  }
+  },
+  "focusPlan": [
+    {
+      "day": 7,
+      "title": "Embeddings Explained",
+      "objectives": ["..."],
+      "reason": "skipped this topic entirely"
+    }
+  ]
 }
 ```
+
+`focusPlan` is deliberately withheld from every response *before* `done: true`
+— only `day` and `title` are exposed mid-interview (see `progress` on
+in-progress turns), never `reason`. This stops the candidate (or the model
+itself, mid-conversation) from ever seeing why a topic was chosen while the
+interview is still running.
 
 ## Known limitations
 
@@ -149,6 +176,17 @@ curl -s -X POST http://localhost:3000/api/interview \
   following up on in rare cases (e.g. re-raising an earlier half-finished
   question after a topic switch). Completion, question count, and day
   coverage are all still enforced correctly in code regardless.
+- **A hard question-count safety cap (`MAX_QUESTIONS = 15`) can override the
+  4-day minimum.** Completion is normally gated on the model emitting
+  `[INTERVIEW_COMPLETE]` *and* the 8-question/4-day minimums being met. If a
+  candidate gives short or evasive answers and the model can't naturally
+  reach those minimums, the interview is still forced to conclude at 15
+  questions rather than run indefinitely — even if fewer than 4 days were
+  covered. When this fires, the feedback prompt is told the interview was
+  cut short so it doesn't produce overconfident feedback from thin data.
+- **Gemini calls retry once automatically** on a transient failure (network
+  blip, rate limit) before surfacing an error to the client, via a shared
+  `retry.js` wrapper used in both `interviewer.js` and `feedback.js`.
 
 ## AI usage
 

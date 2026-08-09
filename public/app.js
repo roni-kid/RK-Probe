@@ -1,5 +1,4 @@
-const candidateSelect = document.querySelector('#candidate-select');
-const startButton = document.querySelector('#start-button');
+const candidateGrid = document.querySelector('#candidate-grid');
 const answerForm = document.querySelector('#answer-form');
 const answerInput = document.querySelector('#answer-input');
 const sendButton = document.querySelector('#send-button');
@@ -48,7 +47,6 @@ function setStatus(state, label) {
 
 function setWaiting(isWaiting) {
   typingIndicator.hidden = !isWaiting;
-  startButton.disabled = isWaiting || candidates.length === 0 || Boolean(sessionId);
   answerInput.disabled = isWaiting || interviewComplete;
   sendButton.disabled = isWaiting || interviewComplete;
   micButton.disabled = isWaiting || interviewComplete;
@@ -207,6 +205,89 @@ function initials(name) {
     .toUpperCase();
 }
 
+// Simple completed/total count for the card's progress bar — deliberately
+// NOT the same as contextBuilder.js's priority scoring (skipped/attempts/etc).
+// This is just "how much of the curriculum did they touch", shown for
+// browsing/picking a candidate; the real editorial scoring only ever runs
+// server-side once an interview actually starts.
+function missionProgress(candidate) {
+  const missions = candidate.missions || [];
+  const total = missions.length;
+  const completed = missions.filter((m) => m.passed === true).length;
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  return { completed, total, percent };
+}
+
+function createCandidateCard(candidate, index) {
+  const member = candidate.member ?? candidate;
+  const { completed, total, percent } = missionProgress(candidate);
+
+  const card = document.createElement('article');
+  card.className = 'candidate-card';
+
+  const header = document.createElement('div');
+  header.className = 'candidate-card-header';
+  const avatar = document.createElement('div');
+  avatar.className = 'candidate-card-avatar';
+  avatar.setAttribute('aria-hidden', 'true');
+  avatar.textContent = initials(member.name || '?');
+  const identity = document.createElement('div');
+  const name = document.createElement('h3');
+  name.className = 'candidate-card-name';
+  name.textContent = member.name || 'Unknown candidate';
+  const role = document.createElement('p');
+  role.className = 'candidate-card-role';
+  role.textContent = member.jobRole || '';
+  identity.append(name, role);
+  header.append(avatar, identity);
+
+  const meta = document.createElement('p');
+  meta.className = 'candidate-card-meta';
+  const experienceText = member.yearsExperience != null ? `${member.yearsExperience} yrs experience` : null;
+  meta.textContent = [experienceText, member.education].filter(Boolean).join(' · ');
+
+  const progress = document.createElement('div');
+  progress.className = 'candidate-card-progress';
+  const progressLabel = document.createElement('div');
+  progressLabel.className = 'candidate-card-progress-label';
+  const progressLabelText = document.createElement('span');
+  progressLabelText.textContent = 'Curriculum progress';
+  const progressLabelValue = document.createElement('span');
+  progressLabelValue.textContent = `${completed}/${total}`;
+  progressLabel.append(progressLabelText, progressLabelValue);
+  const barTrack = document.createElement('div');
+  barTrack.className = 'candidate-card-bar-track';
+  barTrack.setAttribute('role', 'progressbar');
+  barTrack.setAttribute('aria-label', `${member.name || 'Candidate'} curriculum progress`);
+  barTrack.setAttribute('aria-valuemin', '0');
+  barTrack.setAttribute('aria-valuemax', String(total));
+  barTrack.setAttribute('aria-valuenow', String(completed));
+  const barFill = document.createElement('div');
+  barFill.className = 'candidate-card-bar-fill';
+  barFill.style.width = `${percent}%`;
+  barTrack.append(barFill);
+  progress.append(progressLabel, barTrack);
+
+  const startCardButton = document.createElement('button');
+  startCardButton.type = 'button';
+  startCardButton.className = 'candidate-card-start';
+  const startLabel = document.createElement('span');
+  startLabel.className = 'btn-label';
+  startLabel.textContent = 'Start interview';
+  startCardButton.append(startLabel);
+  startCardButton.addEventListener('click', () => startInterview(candidate));
+
+  card.append(header, meta, progress, startCardButton);
+  return card;
+}
+
+function renderCandidateCards() {
+  candidateGrid.replaceChildren();
+  candidates.forEach((candidate, index) => {
+    candidateGrid.append(createCandidateCard(candidate, index));
+  });
+}
+
 function renderCandidatePanel(candidate) {
   const member = candidate.member ?? candidate;
   candidateAvatar.textContent = initials(member.name || '?');
@@ -264,17 +345,13 @@ async function loadCandidates() {
     candidates = data.candidates || [];
     if (candidates.length === 0) throw new Error('No demo candidates were found.');
 
-    candidateSelect.replaceChildren();
-    candidates.forEach((candidate, index) => {
-      const option = document.createElement('option');
-      option.value = index;
-      option.textContent = `${candidate.member.name} — ${candidate.member.jobRole}`;
-      candidateSelect.append(option);
-    });
-    candidateSelect.disabled = false;
-    startButton.disabled = false;
+    renderCandidateCards();
   } catch (error) {
-    candidateSelect.replaceChildren(new Option('Candidates unavailable'));
+    candidateGrid.replaceChildren();
+    const message = document.createElement('p');
+    message.className = 'empty-state';
+    message.textContent = 'Candidates unavailable';
+    candidateGrid.append(message);
     showError(error.message);
   }
 }
@@ -538,22 +615,20 @@ function resetToStart() {
   clearError();
   setStatus(null, 'Waiting to start');
 
-  // Match the original page-load enabled/disabled state.
-  candidateSelect.disabled = candidates.length === 0;
-  startButton.disabled = candidates.length === 0;
+  document.querySelector('.start-panel').hidden = false;
 }
 
 restartButton.addEventListener('click', resetToStart);
 
-startButton.addEventListener('click', async () => {
+async function startInterview(candidate) {
   clearError();
   sessionId = createSessionId();
-  const candidate = candidates[Number(candidateSelect.value)];
   setWaiting(true);
   setStatus(null, 'Connecting…');
 
   try {
     const result = await callInterviewApi({ sessionId, candidate });
+    document.querySelector('.start-panel').hidden = true;
     addMessage(result.reply, 'interviewer');
     answerForm.hidden = false;
     answerInput.focus();
@@ -569,7 +644,7 @@ startButton.addEventListener('click', async () => {
   } finally {
     setWaiting(false);
   }
-});
+}
 
 answerForm.addEventListener('submit', async (event) => {
   event.preventDefault();

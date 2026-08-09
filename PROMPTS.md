@@ -1013,3 +1013,95 @@ background."
 **Tool:** Claude (Sonnet)
 
 ---
+
+### 27. Give each sound-wave point actual ripples (concentric rings)
+
+**Prompt used:**
+"let's the sound waves have ripples in them. Do you understand me?"
+
+**Interpretation confirmed before implementing:** each of the 5 anchor
+points should read as a genuine ripple — multiple concentric rings
+expanding outward together from the same center, like a stone dropped in
+water — rather than one lone ring per point.
+
+**What was actually implemented:**
+- No new DOM nodes. Each `span` now spawns two extra rings via
+  `::before`/`::after`, so all three trace the exact same box: the
+  pseudo-elements use `position: absolute; inset: 0;` against the span
+  (which is itself `position: absolute`, making it the containing block
+  for its own pseudo-elements), so they share the span's exact size and
+  center point without needing to duplicate `width`/`height`/`margin`.
+- `border: inherit` and `animation: inherit` on the pseudo-elements pull
+  the span's own *computed* border (color included, so the existing
+  `nth-child(even)` accent-color override still applies automatically)
+  and the full `sonar-ring` animation shorthand, so no rule had to be
+  duplicated per color/size/duration variant already set on each of the
+  5 points.
+- Introduced a `--delay` custom property per anchor point (replacing the
+  old hardcoded `animation-delay` declarations 1:1) plus a `--ripple-gap`
+  custom property (defaults to `0.9s`, overridden slightly per point —
+  0.75s/1s/0.8s — to match each point's own duration so the three rings
+  stay evenly spaced rather than bunching or spreading unevenly). The
+  `::before` rule fires at `--delay + --ripple-gap`, `::after` at
+  `--delay + --ripple-gap * 2` — pure `calc()` on custom properties, no
+  JS, so all three rings in a point are driven by one shared animation
+  declaration.
+- Net effect: at any moment, each of the 5 points shows up to 3 rings of
+  different sizes expanding/fading together, instead of a single ring —
+  matching "ripples" as multiple concentric rings per point rather than
+  redefining what the 5 scattered points already do (item 26).
+
+**Verification:**
+- `python3` brace/paren balance check on `style.css` after the edit:
+  145/145 braces, 293/293 parens — no syntax break introduced.
+- Manually traced the cascade for `.sound-wave span::before`: confirmed
+  `animation: inherit` resolves against the span's fully computed
+  animation (including its own `--delay`-driven `animation-delay`) before
+  the subsequent `animation-delay: calc(...)` overrides only that one
+  sub-property — the duration, timing-function, and infinite iteration
+  count all still come from the parent's declaration, so no per-point
+  duration/size values needed to be repeated for the pseudo-elements.
+- Confirmed the existing `prefers-reduced-motion` blanket rule still
+  covers `::before`/`::after` generated content, since it targets
+  `*, *::before, *::after` explicitly.
+
+**Files touched:** `public/style.css` only (no HTML or JS changes).
+
+**Tool:** Claude (Sonnet)
+
+---
+
+### 28. Candidate card grid replacing dropdown selector
+
+**Prompt used:**
+"Replace the dropdown+button start panel with a candidate card grid — one
+card per demo candidate showing name/role/experience/education and a
+curriculum-progress bar, each with its own Start Interview button. No
+weakness/strength pills on the card. Keep every other feature (voice input,
+progress panel, focus list, feedback, restart) working exactly as before."
+
+**What actually happened:**
+- `index.html`: replaced `<label>+<select>+<button>` with an empty
+  `#candidate-grid` container.
+- `style.css`: removed dead `select`/`.start-controls` rules (no `<select>`
+  left in the app), added `.candidate-grid`/`.candidate-card` styles reusing
+  existing design tokens (avatar gradient, progress-bar pattern already used
+  in the side panel).
+- `app.js`: added `missionProgress(candidate)` — a simple completed/total
+  mission count for the card's progress bar, deliberately NOT the same as
+  `contextBuilder.js`'s priority scoring (skipped/failed/attempts tiers).
+  That real editorial logic still only runs server-side once an interview
+  actually starts; the card is just for browsing/picking, not a preview of
+  interview focus areas. Factored the old single `startButton` click handler
+  into a reusable `startInterview(candidate)` function each card's own
+  button calls directly. Fixed `resetToStart()` to re-show the grid instead
+  of re-enabling a removed select/button pair.
+- Verified `missionProgress()` against real candidate profiles (Emily Chen:
+  100%, Mia Alvarez: 50% with skips counted as not-completed, Gerald Combs:
+  50% with failures counted as not-completed) plus an empty-missions edge
+  case (0/0, no crash) before shipping.
+
+**Tool:** Claude (Sonnet)
+**Files touched:** `public/index.html`, `public/style.css`, `public/app.js`
+
+---

@@ -476,44 +476,122 @@ h1 {
 
 .start-panel { padding: var(--space-5); }
 
-.start-panel label {
+.start-panel label,
+.start-panel h2 {
   color: var(--text-secondary);
   display: block;
+  font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  margin-bottom: var(--space-3);
+  margin: 0 0 var(--space-4);
   text-transform: uppercase;
 }
 
-.start-controls {
+/* =========================================================
+   Candidate card grid
+   Replaces the old dropdown+button start panel — one card per
+   demo candidate, each with its own "Start interview" button.
+   ========================================================= */
+.candidate-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.candidate-card {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.candidate-card:hover {
+  border-color: var(--border-strong);
+}
+
+.candidate-card-header {
+  align-items: center;
   display: flex;
   gap: var(--space-3);
 }
 
-select {
-  appearance: none;
-  background:
-    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
-    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
-  background-position:
-    calc(100% - 20px) calc(50% - 3px),
-    calc(100% - 15px) calc(50% - 3px);
-  background-repeat: no-repeat;
-  background-size: 6px 6px, 6px 6px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  flex: 1;
-  min-height: 48px;
-  min-width: 0;
-  padding: var(--space-3) var(--space-6) var(--space-3) var(--space-4);
-  transition: border-color var(--duration-fast) var(--ease-out);
+/* Reuses the same initials-avatar treatment as the side-panel candidate
+   header (see .candidate-avatar) at a smaller size, so a candidate looks
+   the same whether they're on a card or already selected. */
+.candidate-card-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border-radius: 50%;
+  color: var(--accent-contrast);
+  display: flex;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
 }
 
-select:hover { border-color: var(--border-strong); }
-select:focus-visible { border-color: var(--accent); }
+.candidate-card:nth-child(even) .candidate-card-avatar {
+  background: linear-gradient(135deg, var(--candidate-accent), #3fae7d);
+}
+
+.candidate-card-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.candidate-card-role {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.candidate-card-meta {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.candidate-card-progress {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.candidate-card-progress-label {
+  color: var(--text-muted);
+  display: flex;
+  font-size: 0.75rem;
+  justify-content: space-between;
+}
+
+/* Reuses the same track/fill pattern as .progress-bar-track /
+   .progress-bar-fill in the side panel, just at card scale. */
+.candidate-card-bar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-pill);
+  height: 6px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.candidate-card-bar-fill {
+  background: linear-gradient(90deg, var(--accent), var(--candidate-accent));
+  border-radius: var(--radius-pill);
+  height: 100%;
+}
+
+.candidate-card-start {
+  margin-top: auto;
+  width: 100%;
+}
 
 textarea {
   background: var(--bg-secondary);
@@ -919,7 +997,8 @@ button:disabled {
 
 @media (max-width: 560px) {
   .app-shell { padding: var(--space-5) var(--space-3); }
-  .start-controls, .answer-form { flex-direction: column; }
+  .candidate-grid { grid-template-columns: 1fr; }
+  .answer-form { flex-direction: column; }
   .answer-form-actions { align-self: stretch; justify-content: flex-end; }
   .message { max-width: 92%; }
   .messages { height: 360px; }
