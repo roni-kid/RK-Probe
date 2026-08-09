@@ -64,6 +64,31 @@
   }
 }
 
+/* Ambient background motion — purely decorative, sits behind all content.
+   Reuses the existing --accent-soft token and a matching low-opacity teal
+   so it stays in the current palette even if the tokens above change. One
+   @keyframes block, no JS. The blanket prefers-reduced-motion rule above
+   already forces this animation's duration to ~0 for reduced-motion users,
+   so no second media query is needed here. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 25%, var(--accent-soft), transparent 55%),
+    radial-gradient(circle at 80% 75%, rgba(95, 217, 164, 0.10), transparent 55%);
+  background-size: 140% 140%;
+  animation: bg-drift 40s var(--ease-out) infinite;
+}
+
+@keyframes bg-drift {
+  0%   { background-position: 0% 0%, 100% 100%; }
+  50%  { background-position: 25% 15%, 75% 85%; }
+  100% { background-position: 0% 0%, 100% 100%; }
+}
+
 * { box-sizing: border-box; }
 
 html {

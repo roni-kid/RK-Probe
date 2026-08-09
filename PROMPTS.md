@@ -557,3 +557,34 @@ new endpoint, real network latency, and more Stage-4 surface area to explain.
 **Files touched:** `transcribe.js` (new), `server.js`, `public/app.js`
 
 ---
+
+### 17. Ambient CSS-only background motion
+
+**Prompt used:**
+"[background-motion-handoff.md spec, pasted in full] — implement CSS-only
+ambient background motion behind the workspace UI, pure CSS/keyframes only,
+no JS, no new files, respecting prefers-reduced-motion."
+
+**What was actually implemented:**
+- Used a `body::before` pseudo-element rather than a dedicated `<div>` —
+  avoids touching `public/index.html` entirely, per the spec's stated
+  preference for the simpler option.
+- Two low-opacity (0.12) radial gradients using the existing palette's
+  accent blue (`#5b8cff`) and teal (`#2c6657`), positioned at opposite
+  corners.
+- Single `@keyframes bg-drift` animates `background-position` back and
+  forth over a 40s `ease-in-out infinite` loop — no transform, no opacity
+  animation, nothing beyond one property.
+- `z-index: -1` and `pointer-events: none` so it never intercepts clicks
+  or affects layout/stacking of any existing element.
+
+**Files touched:** `public/style.css` only (no HTML changes).
+
+**prefers-reduced-motion handling:** confirmed via a
+`@media (prefers-reduced-motion: reduce)` block that sets
+`animation: none` on `body::before`, leaving the static gradient in place
+(not removing the gradient itself — just the motion).
+
+**Tool:** Claude (Sonnet)
+
+---
